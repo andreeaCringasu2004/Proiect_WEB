@@ -1,0 +1,6 @@
+/* Stiluri specifice pentru containerul principal al aplicației */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
