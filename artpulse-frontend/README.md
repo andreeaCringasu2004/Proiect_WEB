@@ -1,4 +1,4 @@
-# Creating frontend using React
+# Creating frontend using mockup data with React
 
 ## Available Scripts
 
