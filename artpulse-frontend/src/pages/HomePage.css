@@ -653,8 +653,8 @@
 
 /* ── Responsive ── */
 @media (max-width: 1024px) {
-  .hero__content { grid-template-columns: 1fr; }
-  .hero__card-preview { max-width: 400px; }
+  .hero__content { grid-template-columns: 1fr; padding-top: 140px; }
+  .hero__card-preview { max-width: 400px; margin-top: 20px; margin-bottom: 40px; }
   .steps { grid-template-columns: repeat(2, 1fr); gap: 24px; }
   .step { border-right: none; padding: 28px; background: var(--white); border-radius: 6px; border: 1px solid var(--border); }
   .seller-cta__inner { grid-template-columns: 1fr; }

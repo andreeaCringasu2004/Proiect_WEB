@@ -84,7 +84,6 @@ const ArtCard: React.FC<(typeof FEATURED)[0]> = ({ title, artist, category, curr
 
 /* ── Access modal ── */
 const AccessModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const navigate = useNavigate();
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>

@@ -86,6 +86,22 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
       {/* Mobile drawer */}
       <div className={`navbar__drawer ${menuOpen ? 'navbar__drawer--open' : ''}`}>
         <Link to="/auctions" className="navbar__drawer-link">Auctions</Link>
+        {/* user info block*/}
+         {user && (
+          <div className="navbar__drawer-user">
+            <div className="navbar__drawer-user__left">
+              <span className="navbar__drawer-user__avatar">
+                {user.name.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <div className="navbar__drawer-user__name">{user.name}</div>
+                <div className="navbar__drawer-user__role">
+                  {roleLabel[user.role] ?? user.role}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <Link to="/categories" className="navbar__drawer-link">Categories</Link>
         <Link to="/info" className="navbar__drawer-link">Info</Link>
         {user?.role === 'seller' && <Link to="/seller/dashboard" className="navbar__drawer-link">My Listings</Link>}
@@ -93,7 +109,15 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
         {user?.role === 'admin' && <Link to="/admin" className="navbar__drawer-link">Admin</Link>}
         <div className="navbar__drawer-divider" />
         {user ? (
-          <button className="navbar__drawer-link navbar__drawer-link--danger" onClick={onLogout}>Sign out</button>
+          <>
+            <Link to="/profile/edit" className="navbar__drawer-link">Edit Profile</Link>
+            <button
+              className="navbar__drawer-link navbar__drawer-link--danger"
+              onClick={onLogout}
+            >
+              Sign out
+            </button>
+          </>
         ) : (
           <>
             <Link to="/login" className="navbar__drawer-link">Sign in</Link>

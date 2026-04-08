@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useData, Product, ChatMessage } from '../context/DataContext';
 import './SellerDashboard.css';
 
 interface SellerProduct {
@@ -34,7 +35,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const AddProductModal: React.FC<{ onClose: () => void; onAdd: (p: SellerProduct) => void }> = ({ onClose, onAdd }) => {
   const [form, setForm] = useState({ title: '', description: '', medium: '', year: '', dimensions: '' });
-  const [file, setFile] = useState<string | null>(null);
+  const file = null;
 
   const submit = () => {
     if (!form.title.trim()) return;
@@ -79,22 +80,83 @@ const AddProductModal: React.FC<{ onClose: () => void; onAdd: (p: SellerProduct)
   );
 };
 
+const ChatModal: React.FC<{ product: Product; expertId: number; onClose: () => void }> = ({ product, expertId, onClose }) => {
+  const { user } = useAuth();
+  const { messages, addMessage, users } = useData();
+  const [inputTitle, setInputTitle] = useState('');
+  
+  const productMsgs = messages.filter(m => m.productId === product.id);
+  const expertName = users.find(u => u.id === expertId)?.name || 'Expert';
+
+  const send = (text: string) => {
+    if (!text.trim() || !user) return;
+    const now = new Date();
+    const time = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+    addMessage({ id: Date.now(), productId: product.id, fromId: user.id || 0, toId: expertId, text, time });
+    
+    // Auto-reply logic for specific questions!
+    if (text === 'Cum decurge procesul de evaluare?') {
+      setTimeout(() => {
+        addMessage({ id: Date.now() + 1, productId: product.id, fromId: expertId, toId: user.id || 0, text: 'Procesul presupune o verificare fizică a obiectului, pentru a-i evalua autenticitatea, condiția materialelor și calitatea generală. Vă voi contacta pentru stabilirea unei întâlniri.', time: new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2, '0') });
+      }, 800);
+    }
+  };
+
+  return (
+    <div className="pm-overlay" onClick={onClose} style={{ zIndex: 3000 }}>
+      <div className="pm-modal pm-modal--wide" onClick={e => e.stopPropagation()} style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+        <button className="pm-close" onClick={onClose}>×</button>
+        <div className="pm-header" style={{ marginBottom: '10px' }}>
+          <h2 className="pm-title">Chat cu {expertName}</h2>
+          <p className="pm-sub">Evaluare: {product.title}</p>
+        </div>
+        
+        <div style={{ flex: 1, overflowY: 'auto', background: 'var(--cream-dark)', padding: '20px', borderRadius: '6px', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {productMsgs.length === 0 && <div style={{ color: 'var(--ink-muted)', textAlign: 'center', margin: 'auto' }}>Niciun mesaj încă. Scrieți o întrebare expertului.</div>}
+          {productMsgs.map(m => (
+            <div key={m.id} style={{ alignSelf: m.fromId === user?.id ? 'flex-end' : 'flex-start', background: m.fromId === user?.id ? 'var(--ink)' : 'white', color: m.fromId === user?.id ? 'white' : 'var(--ink)', padding: '10px 14px', borderRadius: '8px', maxWidth: '80%' }}>
+              <div style={{ fontSize: '13px' }}>{m.text}</div>
+              <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'right' }}>{m.time}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          <button onClick={() => send('Cum decurge procesul de evaluare?')} style={{ fontSize: '12px', padding: '6px 10px', background: 'var(--border)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cum decurge procesul?</button>
+          <button onClick={() => send('Ați reușit să stabiliți o dată?')} style={{ fontSize: '12px', padding: '6px 10px', background: 'var(--border)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Ați stabilit data?</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <input className="pm-input" style={{ flex: 1, margin: 0 }} placeholder="Scrie un mesaj..." value={inputTitle} onChange={e => setInputTitle(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { send(inputTitle); setInputTitle(''); } }} />
+          <button className="pm-confirm-btn" style={{ padding: '0 20px' }} onClick={() => { send(inputTitle); setInputTitle(''); }}>Trimite</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SellerDashboard: React.FC = () => {
   const { user } = useAuth();
-  if (!user || (user.role !== 'seller' && user.role !== 'admin')) return <Navigate to="/" replace />;
+  const { products: dbProducts } = useData();
 
   const [products, setProducts] = useState(SELLER_PRODUCTS);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
+  const [activeChatProduct, setActiveChatProduct] = useState<Product | null>(null);
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
+  if (!user || (user.role !== 'seller' && user.role !== 'admin')) return <Navigate to="/" replace />;
+
   const showToast = (msg: string) => { setToast(msg); setToastVisible(true); setTimeout(() => setToastVisible(false), 3000); };
 
-  const filtered = products.filter(p => {
+  const combinedProducts = user.id ? dbProducts.filter(p => p.sellerId === user.id) : [];
+  const mixedList = combinedProducts.length > 0 ? combinedProducts : products as any;
+
+  const filtered = mixedList.filter((p: any) => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'all' || p.status === statusFilter;
+    const matchStatus = statusFilter === 'all' || p.status === statusFilter || p.status.toLowerCase() === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -156,7 +218,7 @@ const SellerDashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p => (
+              {filtered.map((p: any) => (
                 <tr key={p.id}>
                   <td>
                     <div className="seller-table__product">
@@ -195,7 +257,11 @@ const SellerDashboard: React.FC = () => {
                       {p.status === 'live' && (
                         <Link to={`/auctions/${p.id}`} className="seller-action-btn seller-action-btn--view">View Live</Link>
                       )}
-                      {(p.status === 'draft' || p.status === 'pending_review') && (
+                      {p.status === 'UNDER_REVIEW' && p.expertId && (
+                        <button className="seller-action-btn seller-action-btn--edit"
+                          onClick={() => setActiveChatProduct(p)}>Chat Expert</button>
+                      )}
+                      {(p.status === 'draft' || p.status === 'pending_review' || p.status === 'PENDING') && (
                         <button className="seller-action-btn seller-action-btn--edit"
                           onClick={() => showToast('Edit form coming soon.')}>Edit</button>
                       )}
@@ -211,7 +277,8 @@ const SellerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {showAdd && <AddProductModal onClose={() => setShowAdd(false)} onAdd={(p) => { setProducts(prev => [p, ...prev]); showToast('✓ Product submitted for expert review!'); }} />}
+      {showAdd && <AddProductModal onClose={() => setShowAdd(false)} onAdd={(p: any) => { setProducts(prev => [p, ...prev] as any); showToast('✓ Product submitted for expert review!'); }} />}
+      {activeChatProduct && activeChatProduct.expertId && <ChatModal product={activeChatProduct} expertId={activeChatProduct.expertId} onClose={() => setActiveChatProduct(null)} />}
       <div className={`ad-toast ${toastVisible ? 'ad-toast--visible' : ''}`}>{toast}</div>
     </main>
   );

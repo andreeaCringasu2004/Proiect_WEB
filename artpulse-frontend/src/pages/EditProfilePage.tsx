@@ -6,11 +6,9 @@ import './EditProfilePage.css';
 const EditProfilePage: React.FC = () => {
   const { user } = useAuth();
 
-  if (!user) return <Navigate to="/login" replace />;
-
   const [form, setForm] = useState({
-    firstName: user.name.split(' ')[0] ?? '',
-    lastName:  user.name.split(' ')[1] ?? '',
+    firstName: user?.name?.split(' ')[0] ?? '',
+    lastName:  user?.name?.split(' ')[1] ?? '',
     email:     'user@example.com',
     phone:     '',
     location:  'Bucharest, Romania',
@@ -20,6 +18,8 @@ const EditProfilePage: React.FC = () => {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [activeSection, setActiveSection] = useState<'profile' | 'password' | 'danger'>('profile');
+
+  if (!user) return <Navigate to="/login" replace />;
 
   const showToast = (msg: string) => {
     setToast(msg);

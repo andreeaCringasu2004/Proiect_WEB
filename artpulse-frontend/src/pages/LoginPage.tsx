@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../context/AuthContext';
 import './AuthPages.css';
 
+import { PREDEFINED_USERS } from '../context/DataContext';
+
 interface LoginPageProps {
   onLogin?: (user: User) => void;
 }
@@ -18,6 +20,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setError('');
   };
 
+  const autofill = (email: string) => {
+    setForm({ email, password: 'password123' });
+    setError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.password) {
@@ -26,17 +33,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     setLoading(true);
     try {
-      // TODO: replace with real API call
-      // const res = await authService.login(form.email, form.password);
-      // onLogin?.(res.user);
-      // navigate('/auctions');
+      // Fake network delay
+      await new Promise(r => setTimeout(r, 600));
 
-      // Demo only
-      await new Promise(r => setTimeout(r, 900));
-      onLogin?.({ name: 'Demo User', role: 'bidder' });
-      navigate('/auctions');
+      const foundUser = PREDEFINED_USERS.find(u => u.email === form.email);
+      if (foundUser) {
+        onLogin?.(foundUser);
+        
+        // redirect based on role
+        if (foundUser.role === 'admin') navigate('/admin');
+        else if (foundUser.role === 'expert') navigate('/expert/review');
+        else if (foundUser.role === 'seller') navigate('/seller/dashboard');
+        else navigate('/auctions');
+      } else {
+        throw new Error('User not found');
+      }
     } catch {
-      setError('Invalid email or password.');
+      setError('Invalid email or password. Try a demo account below.');
     } finally {
       setLoading(false);
     }
@@ -106,6 +119,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <button className="auth-form__submit" type="submit" disabled={loading}>
               {loading ? <span className="auth-form__spinner" /> : 'Sign in'}
             </button>
+            
+            <div style={{ marginTop: '20px', padding: '12px', background: 'var(--cream)', borderRadius: '6px', fontSize: '13px' }}>
+              <strong>Conturi de Test Preadăugate (Apasă pentru completare automată):</strong>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('admin@artpulse.com'); }} style={{ color: 'var(--ink)' }}>👑 Admin</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('expert1@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🔎 Expert 1 (Evaluare)</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('expert2@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🔎 Expert 2</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('seller1@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🖌️ Seller 1 (Conversații)</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('seller2@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🖌️ Seller 2 (Produse diverse)</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('bidder1@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🔨 Bidder 1</a>
+                <a href="#fill" onClick={(e) => { e.preventDefault(); autofill('bidder2@artpulse.com'); }} style={{ color: 'var(--ink)' }}>🔨 Bidder 2</a>
+              </div>
+            </div>
           </form>
 
           <div className="auth-page__divider">
