@@ -1,61 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import './ChatWidget.css';
 
-/* ══════════════════════════════════════════════════════════
-   TYPES
-   ══════════════════════════════════════════════════════════ */
-interface ChatMessage {
-  id: number;
-  sender: string;
-  role: 'bidder' | 'expert' | 'system';
-  text: string;
-  time: string;
-  isOwn: boolean;
-}
 
-/* ══════════════════════════════════════════════════════════
-   INITIAL MESSAGES (per role — different context)
-   ══════════════════════════════════════════════════════════ */
-const BIDDER_INITIAL: ChatMessage[] = [
-  {
-    id: 1,
-    sender: 'ArtPulse Expert',
-    role: 'expert',
-    text: 'Hello! I\'m Elena, your assigned expert evaluator for this auction. I\'m available to answer any questions about this work — provenance, condition, authentication, or market value.',
-    time: '10:02',
-    isOwn: false,
-  },
-  {
-    id: 2,
-    sender: 'ArtPulse Expert',
-    role: 'expert',
-    text: 'Feel free to ask about the artist\'s background, the technique used, or anything that might affect your bidding decision.',
-    time: '10:03',
-    isOwn: false,
-  },
-];
-
-const EXPERT_INITIAL: ChatMessage[] = [
-  {
-    id: 1,
-    sender: 'System',
-    role: 'system',
-    text: 'Expert review channel — Lumière dorée (Lot #1). You are reviewing this work. Bidders may contact you with questions.',
-    time: '09:55',
-    isOwn: false,
-  },
-  {
-    id: 2,
-    sender: 'Bidder ***42',
-    role: 'bidder',
-    text: 'Hi, I have a question about the condition report. Is the linen support showing any signs of tension loss at the corners?',
-    time: '10:10',
-    isOwn: false,
-  },
-];
-
-/* Quick reply suggestions per role */
 const BIDDER_QUICK = [
   'Can you tell me more about the condition?',
   'Is the attribution fully verified?',
@@ -70,94 +18,69 @@ const EXPERT_QUICK = [
   'I can provide a full written condition report.',
 ];
 
-/* ══════════════════════════════════════════════════════════
-   CHAT WIDGET
-   ══════════════════════════════════════════════════════════ */
+
 interface ChatWidgetProps {
-  /** Optional: lock the widget to a specific auction title shown in header */
-  auctionTitle?: string;
+  initialProductId?: number;
 }
 
-const ChatWidget: React.FC<ChatWidgetProps> = ({ auctionTitle }) => {
+const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
   const { user } = useAuth();
+  const { messages, addMessage, users } = useData();
   const [open, setOpen] = useState(false);
   const [minimised, setMinimised] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(() =>
-    user?.role === 'expert' ? EXPERT_INITIAL : BIDDER_INITIAL
-  );
   const [input, setInput] = useState('');
-  const [unread, setUnread] = useState(user?.role === 'expert' ? 1 : 0);
-  const [isTyping, setIsTyping] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [wsStatus] = useState<'online' | 'offline'>('online');
+  const [currentChannelId] = useState(initialProductId);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const msgId = useRef(100);
 
-  /* Only show for bidder or expert */
-  if (!user || !['bidder', 'seller', 'expert'].includes(user.role)) return null;
-
-  const isExpert = user.role === 'expert';
+  const isExpert = user?.role === 'expert';
   const quickReplies = isExpert ? EXPERT_QUICK : BIDDER_QUICK;
 
-  const getTime = () =>
-    new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const filteredMessages = messages.filter(m => m.productId === currentChannelId);
 
-  /* Scroll to bottom on new messages */
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+
   useEffect(() => {
     if (open && !minimised) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, open, minimised]);
+  }, [filteredMessages.length, open, minimised]);
 
-  /* Auto-response simulation */
-  const simulateResponse = (userMsg: string) => {
-    setIsTyping(true);
-    const delay = 1200 + Math.random() * 1000;
-    setTimeout(() => {
-      setIsTyping(false);
-      const responses = isExpert
-        ? [
-            `Thank you for your question about "${userMsg.slice(0, 30)}...". I've reviewed the work extensively and can confirm it meets our authentication standards.`,
-            'I examined this piece in person at the artist\'s studio. The materials and technique are entirely consistent with the artist\'s known practice.',
-            'The condition is excellent — no restorations, no re-lining, no canvas deformations. The surface is stable and fully intact.',
-            'I can issue a supplementary written condition report within 24 hours if that would help your decision.',
-          ]
-        : [
-            'Thank you — that\'s very helpful information.',
-            'That\'s great to know. It gives me more confidence in placing a bid.',
-            'I appreciate the clarification. Could you also tell me if there have been any past exhibitions?',
-            'Understood. Is a viewing appointment possible before the auction closes?',
-          ];
+  useEffect(() => {
+    if (!open || minimised) return;
+    setUnread(0);
+  }, [filteredMessages.length, open, minimised]);
 
-      const resp = responses[Math.floor(Math.random() * responses.length)];
-      const newMsg: ChatMessage = {
-        id: ++msgId.current,
-        sender: isExpert ? 'Bidder ***42' : 'ArtPulse Expert',
-        role: isExpert ? 'bidder' : 'expert',
-        text: resp,
-        time: getTime(),
-        isOwn: false,
-      };
-      setMessages(prev => [...prev, newMsg]);
-      if (!open || minimised) setUnread(u => u + 1);
-    }, delay);
-  };
+
+  if (!user || !['bidder', 'seller', 'expert', 'admin'].includes(user.role)) return null;
 
   const sendMessage = (text?: string) => {
-    const msg = (text ?? input).trim();
-    if (!msg) return;
-    const newMsg: ChatMessage = {
-      id: ++msgId.current,
-      sender: user.name,
-      role: user.role as 'bidder' | 'expert',
-      text: msg,
-      time: getTime(),
-      isOwn: true,
-    };
-    setMessages(prev => [...prev, newMsg]);
+    const msgText = (text ?? input).trim();
+    if (!msgText) return;
+
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+    addMessage({
+      id: Date.now(),
+      productId: currentChannelId,
+      fromId: user.id || 0,
+      toId: 0,
+      text: msgText,
+      time
+    });
+
     setInput('');
-    simulateResponse(msg);
-    inputRef.current?.focus();
+    setTimeout(() => inputRef.current?.focus(), 10);
+  };
+
+  const getUserName = (id: number) => {
+    if (id === 0) return 'Expert Support';
+    if (!users) return 'User';
+    const u = users.find(x => x.id === id);
+    return u ? u.name : `User #${id}`;
   };
 
   const handleOpen = () => {
@@ -172,147 +95,74 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ auctionTitle }) => {
 
   return (
     <>
-      {/* ── Toggle Button ── */}
       {!open && (
-        <button
-          className="chat-fab"
-          onClick={handleOpen}
-          title={isExpert ? 'Open bidder messages' : 'Ask the Expert'}
-          aria-label="Open chat"
-        >
-          <span className="chat-fab__icon">
-            {isExpert ? '🎓' : '💬'}
-          </span>
-          <span className="chat-fab__label">
-            {isExpert ? 'Bidder Q&A' : 'Ask Expert'}
-          </span>
-          {unread > 0 && (
-            <span className="chat-fab__badge">{unread}</span>
-          )}
+        <button className="chat-fab" onClick={handleOpen} title="Open Chat">
+          <span className="chat-fab__icon">{currentChannelId === -1 ? '💬' : '🖼'}</span>
+          <span className="chat-fab__label">{currentChannelId === -1 ? 'Expert Q&A' : 'Work Chat'}</span>
+          {unread > 0 && <span className="chat-fab__badge">{unread}</span>}
         </button>
       )}
 
-      {/* ── Chat Window ── */}
       {open && (
         <div className={`chat-window ${minimised ? 'chat-window--minimised' : ''}`}>
-
-          {/* Header */}
           <div className="chat-header" onClick={minimised ? handleMinimise : undefined}>
             <div className="chat-header__info">
-              <div className="chat-header__avatar">
-                {isExpert ? '🎓' : '🖼'}
-              </div>
+              <div className="chat-header__avatar">{currentChannelId === -1 ? '🏫' : '🖼'}</div>
               <div>
                 <div className="chat-header__title">
-                  {isExpert ? 'Bidder Q&A Channel' : 'Ask the Expert'}
+                  {currentChannelId === -1 ? 'ArtPulse Expert Q&A' : 'Technical Discussion'}
                 </div>
                 <div className="chat-header__sub">
-                  {auctionTitle
-                    ? `Re: ${auctionTitle.slice(0, 28)}${auctionTitle.length > 28 ? '…' : ''}`
-                    : isExpert
-                    ? 'Lot #1 · Lumière dorée'
-                    : 'Elena · Certified Evaluator'}
+                  <span className={`chat-ws-dot chat-ws-dot--${wsStatus}`} />
+                  {currentChannelId === -1 ? 'Public Channel' : `Lot #${currentChannelId}`}
                 </div>
               </div>
             </div>
             <div className="chat-header__actions">
-              <button
-                className="chat-header__btn"
-                onClick={e => { e.stopPropagation(); handleMinimise(); }}
-                title={minimised ? 'Expand' : 'Minimise'}
-                aria-label={minimised ? 'Expand chat' : 'Minimise chat'}
-              >
-                {minimised ? '▲' : '▼'}
-              </button>
-              <button
-                className="chat-header__btn chat-header__btn--close"
-                onClick={e => { e.stopPropagation(); handleClose(); }}
-                title="Close chat"
-                aria-label="Close chat"
-              >
-                ✕
-              </button>
+              <button className="chat-header__btn" onClick={handleMinimise}>{minimised ? '▲' : '▼'}</button>
+              <button className="chat-header__btn chat-header__btn--close" onClick={handleClose}>✕</button>
             </div>
           </div>
 
           {!minimised && (
             <>
-              {/* Messages */}
-              <div className="chat-messages" role="log" aria-live="polite">
-                {messages.map(msg => (
-                  <div
-                    key={msg.id}
-                    className={`chat-msg ${msg.isOwn ? 'chat-msg--own' : ''} ${msg.role === 'system' ? 'chat-msg--system' : ''}`}
-                  >
-                    {!msg.isOwn && msg.role !== 'system' && (
-                      <div className={`chat-msg__avatar chat-msg__avatar--${msg.role}`}>
-                        {msg.role === 'expert' ? '🎓' : '🎯'}
-                      </div>
-                    )}
-                    <div className="chat-msg__content">
-                      {!msg.isOwn && msg.role !== 'system' && (
-                        <span className="chat-msg__sender">{msg.sender}</span>
-                      )}
-                      <div className={`chat-msg__bubble chat-msg__bubble--${msg.role}`}>
-                        {msg.text}
-                      </div>
-                      <span className="chat-msg__time">{msg.time}</span>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Typing indicator */}
-                {isTyping && (
-                  <div className="chat-msg">
-                    <div className={`chat-msg__avatar chat-msg__avatar--${isExpert ? 'bidder' : 'expert'}`}>
-                      {isExpert ? '🎯' : '🎓'}
-                    </div>
-                    <div className="chat-msg__content">
-                      <div className="chat-typing">
-                        <span /><span /><span />
+              <div className="chat-messages">
+                {filteredMessages.map(msg => {
+                  const isOwn = msg.fromId === user.id;
+                  const senderName = getUserName(msg.fromId);
+                  return (
+                    <div key={msg.id} className={`chat-msg ${isOwn ? 'chat-msg--own' : ''}`}>
+                      {!isOwn && <div className="chat-msg__avatar">👤</div>}
+                      <div className="chat-msg__content">
+                        {!isOwn && <span className="chat-msg__sender">{senderName}</span>}
+                        <div className={`chat-msg__bubble ${isOwn ? 'chat-msg__bubble--own' : ''}`}>
+                          {msg.text}
+                        </div>
+                        <span className="chat-msg__time">{msg.time}</span>
                       </div>
                     </div>
-                  </div>
-                )}
-
+                  );
+                })}
                 <div ref={bottomRef} />
               </div>
 
-              {/* Quick replies */}
               <div className="chat-quick">
                 {quickReplies.map((q, i) => (
-                  <button key={i} className="chat-quick__btn" onClick={() => sendMessage(q)}>
-                    {q}
-                  </button>
+                  <button key={i} className="chat-quick__btn" onClick={() => sendMessage(q)}>{q}</button>
                 ))}
               </div>
 
-              {/* Input */}
               <div className="chat-input-row">
                 <input
                   ref={inputRef}
                   className="chat-input"
                   type="text"
-                  placeholder={isExpert ? 'Reply to bidder…' : 'Ask the expert anything…'}
+                  placeholder="Type a message..."
                   value={input}
                   onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                  maxLength={400}
-                  aria-label="Chat message"
+                  onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
                 />
-                <button
-                  className="chat-send-btn"
-                  onClick={() => sendMessage()}
-                  disabled={!input.trim()}
-                  aria-label="Send message"
-                  title="Send (Enter)"
-                >
-                  ↑
-                </button>
-              </div>
-
-              <div className="chat-footer-note">
-                Messages are moderated · No personal data shared
+                <button className="chat-send-btn" onClick={() => sendMessage()} disabled={!input.trim()}>↑</button>
               </div>
             </>
           )}

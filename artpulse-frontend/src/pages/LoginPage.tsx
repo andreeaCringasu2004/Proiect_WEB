@@ -11,6 +11,10 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [form, setForm] = useState({ email: '', password: '' });
+
+  React.useEffect(() => {
+    setForm({ email: '', password: '' });
+  }, []);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -33,14 +37,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     setLoading(true);
     try {
-      // Fake network delay
       await new Promise(r => setTimeout(r, 600));
 
       const foundUser = PREDEFINED_USERS.find(u => u.email === form.email);
       if (foundUser) {
         onLogin?.(foundUser);
-        
-        // redirect based on role
+
         if (foundUser.role === 'admin') navigate('/admin');
         else if (foundUser.role === 'expert') navigate('/expert/review');
         else if (foundUser.role === 'seller') navigate('/seller/dashboard');
@@ -119,7 +121,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <button className="auth-form__submit" type="submit" disabled={loading}>
               {loading ? <span className="auth-form__spinner" /> : 'Sign in'}
             </button>
-            
+
             <div style={{ marginTop: '20px', padding: '12px', background: 'var(--cream)', borderRadius: '6px', fontSize: '13px' }}>
               <strong>Conturi de Test Preadăugate (Apasă pentru completare automată):</strong>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>

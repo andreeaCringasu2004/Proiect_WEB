@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PaymentModal from '../components/PaymentModal';
 import './WatchlistPage.css';
 
-/* ══════════════════════════════════════════════════════════
-   TYPES
-   ══════════════════════════════════════════════════════════ */
+
 interface WatchlistItem {
   id: number;
   title: string;
@@ -14,6 +13,7 @@ interface WatchlistItem {
   currentBid: number;
   startingBid: number;
   status: 'upcoming' | 'active' | 'ended';
+  isWon?: boolean;
   endsAt: Date;          // real Date for countdown logic
   img: string;
   isWatched: boolean;
@@ -22,9 +22,7 @@ interface WatchlistItem {
   notifiedStart: boolean;// auction-start notification sent
 }
 
-/* ══════════════════════════════════════════════════════════
-   SESSION TOAST (distinct from action toasts)
-   ══════════════════════════════════════════════════════════ */
+
 interface SessionToast {
   id: number;
   type: 'start' | 'warning' | 'urgent' | 'info';
@@ -32,9 +30,6 @@ interface SessionToast {
   sub: string;
 }
 
-/* ══════════════════════════════════════════════════════════
-   COUNTDOWN HOOK
-   ══════════════════════════════════════════════════════════ */
 const useCountdown = (target: Date) => {
   const calc = () => {
     const diff = target.getTime() - Date.now();
@@ -54,9 +49,6 @@ const useCountdown = (target: Date) => {
   return t;
 };
 
-/* ══════════════════════════════════════════════════════════
-   MOCK WATCHLIST DATA
-   ══════════════════════════════════════════════════════════ */
 const INITIAL_WATCHLIST: WatchlistItem[] = [
   {
     id: 1,
@@ -118,16 +110,61 @@ const INITIAL_WATCHLIST: WatchlistItem[] = [
     notified5: false,
     notifiedStart: true,
   },
+  {
+    id: 11,
+    title: 'Autumn in Paris',
+    artist: 'Jean-Luc Dubois',
+    category: 'Painting',
+    currentBid: 2_100,
+    startingBid: 1_200,
+    status: 'active',
+    endsAt: new Date(Date.now() + 11 * 60_000 + 10_000), // ~11m (will trigger T-10 soon)
+    img: 'https://images.unsplash.com/photo-1549887552-cb1071d3e5ac?w=600&q=80',
+    isWatched: true,
+    notified10: false,
+    notified5: false,
+    notifiedStart: true,
+  },
+  {
+    id: 12,
+    title: 'Metallic Distortions',
+    artist: 'Anna Kozlova',
+    category: 'Sculpture',
+    currentBid: 5_500,
+    startingBid: 3_000,
+    status: 'active',
+    endsAt: new Date(Date.now() + 6 * 60_000 + 15_000), // ~6m (will trigger T-5 soon)
+    img: 'https://images.unsplash.com/photo-1606828556855-83e9b11786ba?w=600&q=80',
+    isWatched: true,
+    notified10: true,
+    notified5: false,
+    notifiedStart: true,
+  },
+  {
+    id: 13,
+    title: 'Lost in the City',
+    artist: 'Marc Vance',
+    category: 'Photography',
+    currentBid: 9_200,
+    startingBid: 5_000,
+    status: 'ended',
+    isWon: true,
+    endsAt: new Date(Date.now() - 3600_000), // Ended 1 hour ago
+    img: 'https://images.unsplash.com/photo-1449844908441-8829872d2607?w=600&q=80',
+    isWatched: true,
+    notified10: true,
+    notified5: true,
+    notifiedStart: true,
+  }
 ];
 
-/* ══════════════════════════════════════════════════════════
-   CARD COMPONENT (inline countdown + heart)
-   ══════════════════════════════════════════════════════════ */
+
 interface WatchCardProps {
   item: WatchlistItem;
   onToggle: (id: number) => void;
+  onPay?: (item: WatchlistItem) => void;
 }
-const WatchCard: React.FC<WatchCardProps> = ({ item, onToggle }) => {
+const WatchCard: React.FC<WatchCardProps> = ({ item, onToggle, onPay }) => {
   const cd = useCountdown(item.endsAt);
   const urgent = item.status === 'active' && cd.totalMs > 0 && cd.totalMs < 10 * 60_000;
   const veryUrgent = item.status === 'active' && cd.totalMs > 0 && cd.totalMs < 5 * 60_000;
@@ -189,15 +226,16 @@ const WatchCard: React.FC<WatchCardProps> = ({ item, onToggle }) => {
           {item.status === 'active' && (
             <Link to={`/auctions/${item.id}`} className="wl-card__bid-btn">Bid Now →</Link>
           )}
+          {item.status === 'ended' && item.isWon && onPay && (
+            <button className="wl-card__bid-btn" onClick={() => onPay(item)} style={{ background: 'var(--sage)' }}>Pay Now →</button>
+          )}
         </div>
       </div>
     </article>
   );
 };
 
-/* ══════════════════════════════════════════════════════════
-   SESSION TOAST DISPLAY
-   ══════════════════════════════════════════════════════════ */
+
 const SessionToastStack: React.FC<{ toasts: SessionToast[]; onDismiss: (id: number) => void }> = ({ toasts, onDismiss }) => (
   <div className="session-toasts" aria-live="assertive">
     {toasts.map(t => (
@@ -215,9 +253,7 @@ const SessionToastStack: React.FC<{ toasts: SessionToast[]; onDismiss: (id: numb
   </div>
 );
 
-/* ══════════════════════════════════════════════════════════
-   MAIN PAGE
-   ══════════════════════════════════════════════════════════ */
+
 let toastSeq = 1;
 
 const WatchlistPage: React.FC = () => {
@@ -228,6 +264,8 @@ const WatchlistPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'active' | 'upcoming' | 'ended'>('all');
   const [actionToast, setActionToast] = useState('');
   const [actionVisible, setActionVisible] = useState(false);
+
+  const [payItem, setPayItem] = useState<WatchlistItem | null>(null);
 
   const showAction = (msg: string) => {
     setActionToast(msg);
@@ -289,7 +327,6 @@ const WatchlistPage: React.FC = () => {
         });
       }, 4000); // simulate start after 4s for demo
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!user || !['bidder', 'seller', 'expert', 'admin'].includes(user.role)) {
@@ -365,7 +402,7 @@ const WatchlistPage: React.FC = () => {
         {displayed.length > 0 ? (
           <div className="wl-grid">
             {displayed.map(item => (
-              <WatchCard key={item.id} item={item} onToggle={toggleWatch} />
+              <WatchCard key={item.id} item={item} onToggle={toggleWatch} onPay={setPayItem} />
             ))}
           </div>
         ) : (
@@ -384,6 +421,20 @@ const WatchlistPage: React.FC = () => {
 
       {/* Action toast */}
       <div className={`ad-toast ${actionVisible ? 'ad-toast--visible' : ''}`}>{actionToast}</div>
+
+      {/* Payment Modal */}
+      {payItem && (
+        <PaymentModal
+          amount={payItem.currentBid}
+          itemName={payItem.title}
+          onClose={() => setPayItem(null)}
+          onSuccess={() => {
+            setItems(prev => prev.map(i => i.id === payItem.id ? { ...i, isWon: false, status: 'ended' } : i));
+            setPayItem(null);
+            showAction('✨ Payment successful! Status updated.');
+          }}
+        />
+      )}
     </main>
   );
 };

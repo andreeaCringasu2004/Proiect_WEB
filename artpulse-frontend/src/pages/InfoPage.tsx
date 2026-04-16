@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import './InfoPage.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 type Tab = 'story' | 'how-it-works' | 'contact';
 
@@ -192,23 +205,37 @@ const InfoPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Embedded map */}
+                {/* Embedded Google Map */}
                 <div className="info-contact__map-wrap">
                   <div className="info-contact__map-label">📍 ArtPulse HQ · Calea Victoriei 12, Bucharest</div>
-                  <iframe
-                    className="info-contact__map"
-                    title="ArtPulse location"
-                    src="https://www.openstreetmap.org/export/embed.html?bbox=26.0875%2C44.4310%2C26.1075%2C44.4410&layer=mapnik&marker=44.4360%2C26.0975"
-                    loading="lazy"
-                    allowFullScreen
-                  />
+
+                  <div className="info-contact__map-container">
+                    <MapContainer
+                      center={[44.4326, 26.0988]}
+                      zoom={15}
+                      scrollWheelZoom={false}
+                      className="info-leaflet-map"
+                      style={{ height: '100%', width: '100%', borderRadius: '8px' }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <Marker position={[44.4326, 26.0988]}>
+                        <Popup>
+                          ArtPulse HQ <br /> Calea Victoriei 12
+                        </Popup>
+                      </Marker>
+                    </MapContainer>
+                  </div>
+
                   <a
                     className="info-contact__map-link"
-                    href="https://www.openstreetmap.org/?mlat=44.4360&mlon=26.0975#map=16/44.4360/26.0975"
+                    href="https://www.google.com/maps/search/?api=1&query=Calea+Victoriei+12,+Bucharest"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open in OpenStreetMap ↗
+                    Open in Google Maps ↗
                   </a>
                 </div>
               </div>

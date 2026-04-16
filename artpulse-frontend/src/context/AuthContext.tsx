@@ -21,15 +21,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On mount: check if there's an existing session (JWT in HttpOnly cookie is validated server-side)
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // TODO: Replace with real API call
-        // const res = await fetch('/api/auth/me', { credentials: 'include' });
-        // if (res.ok) { const data = await res.json(); setUser(data.user); }
-
-        // Check localStorage for demo (remove in production — use cookie/server)
         const stored = sessionStorage.getItem('artpulse_demo_user');
         if (stored) setUser(JSON.parse(stored));
       } catch {
@@ -43,13 +37,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = (userData: User) => {
     setUser(userData);
-    // Demo only — real auth uses HttpOnly cookies set by backend
     sessionStorage.setItem('artpulse_demo_user', JSON.stringify(userData));
   };
 
   const logout = async () => {
     try {
-      // TODO: await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } finally {
       setUser(null);
       sessionStorage.removeItem('artpulse_demo_user');

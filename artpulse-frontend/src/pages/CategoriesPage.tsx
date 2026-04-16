@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import './CategoriesPage.css';
 
-/* ── Gallery images (auto-rotate 3s) ── */
+
 const GALLERY_IMAGES = [
   { src: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=1200&q=80', title: 'Lumière dorée', artist: 'Marie Leblanc' },
   { src: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=1200&q=80', title: 'Midnight Canvas', artist: 'Arjun Mehta' },
@@ -12,7 +12,7 @@ const GALLERY_IMAGES = [
   { src: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=1200&q=80', title: 'The Silence', artist: 'Andrei Constantin' },
 ];
 
-/* ── Category definitions ── */
+
 const CATEGORIES = [
   {
     key: 'Painting',
@@ -20,10 +20,10 @@ const CATEGORIES = [
     desc: 'Oil, acrylic, watercolour and mixed pigment works on canvas, board and paper.',
     count: 4,
     auctions: [
-      { id: 1, title: 'Lumière dorée',   artist: 'Marie Leblanc',   bid: 4200, status: 'active',   time: '2:14:03', img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80' },
-      { id: 4, title: 'Golden Hour',     artist: 'Ama Diallo',      bid: 3100, status: 'upcoming',  time: 'Starts in 24h', img: 'https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=600&q=80' },
-      { id: 7, title: 'Midnight Canvas', artist: 'Arjun Mehta',     bid: 2300, status: 'upcoming',  time: 'Starts in 48h', img: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80' },
-      { id: 9, title: 'Echoes of Blue',  artist: 'Theo Andersen',   bid: 6800, status: 'active',   time: '9:00:00', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80' },
+      { id: 1, title: 'Lumière dorée', artist: 'Marie Leblanc', bid: 4200, status: 'active', time: '2:14:03', img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80' },
+      { id: 4, title: 'Golden Hour', artist: 'Ama Diallo', bid: 3100, status: 'upcoming', time: 'Starts in 24h', img: 'https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=600&q=80' },
+      { id: 7, title: 'Midnight Canvas', artist: 'Arjun Mehta', bid: 2300, status: 'upcoming', time: 'Starts in 48h', img: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80' },
+      { id: 9, title: 'Echoes of Blue', artist: 'Theo Andersen', bid: 6800, status: 'active', time: '9:00:00', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80' },
     ],
   },
   {
@@ -32,9 +32,9 @@ const CATEGORIES = [
     desc: 'Three-dimensional works in bronze, marble, ceramic, wood and contemporary materials.',
     count: 3,
     auctions: [
-      { id: 2, title: 'Silent Forms', artist: 'Kenji Watanabe', bid: 8750, status: 'active',  time: '5:33:00', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
-      { id: 6, title: 'Terra Nova',   artist: 'Hana Sato',      bid: 5500, status: 'active',  time: '7:00:00', img: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80' },
-      { id: 10, title: 'Stone Memory', artist: 'Marco Ricci',   bid: 1200, status: 'upcoming', time: 'Starts in 3d', img: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=600&q=80' },
+      { id: 2, title: 'Silent Forms', artist: 'Kenji Watanabe', bid: 8750, status: 'active', time: '5:33:00', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
+      { id: 6, title: 'Terra Nova', artist: 'Hana Sato', bid: 5500, status: 'active', time: '7:00:00', img: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80' },
+      { id: 10, title: 'Stone Memory', artist: 'Marco Ricci', bid: 1200, status: 'upcoming', time: 'Starts in 3d', img: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=600&q=80' },
     ],
   },
   {
@@ -43,8 +43,8 @@ const CATEGORIES = [
     desc: 'Fine-art prints, limited editions and documentary photography from international artists.',
     count: 2,
     auctions: [
-      { id: 3, title: 'Urban Abstraction', artist: 'Sofia Petrov', bid: 1900, status: 'active',  time: '11:05:00', img: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&q=80' },
-      { id: 5, title: 'Deep Waters',       artist: 'Luca Romano',  bid: 920,  status: 'active',  time: '3:20:00', img: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600&q=80' },
+      { id: 3, title: 'Urban Abstraction', artist: 'Sofia Petrov', bid: 1900, status: 'active', time: '11:05:00', img: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&q=80' },
+      { id: 5, title: 'Deep Waters', artist: 'Luca Romano', bid: 920, status: 'active', time: '3:20:00', img: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600&q=80' },
     ],
   },
   {
@@ -58,7 +58,7 @@ const CATEGORIES = [
   },
 ];
 
-/* ── Auto-Gallery component (changes every 3 seconds) ── */
+
 const AutoGallery: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -136,7 +136,6 @@ const AutoGallery: React.FC = () => {
   );
 };
 
-/* ── Small Auction Card (used inside each category section) ── */
 interface CatAuctionCardProps {
   id: number; title: string; artist: string; bid: number;
   status: string; time: string; img: string;
@@ -173,7 +172,6 @@ const CatAuctionCard: React.FC<CatAuctionCardProps> = ({ id, title, artist, bid,
   </article>
 );
 
-/* ── Main CategoriesPage ── */
 const CategoriesPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const allKeys = ['All', ...CATEGORIES.map(c => c.key)];

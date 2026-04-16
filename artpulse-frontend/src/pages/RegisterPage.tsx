@@ -20,6 +20,19 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
     agreeTerms: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    setForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'bidder' as Role,
+      agreeTerms: false,
+    });
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -46,8 +59,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
-      // TODO: replace with real API call
-      // await authService.register({ ...form });
       await new Promise(r => setTimeout(r, 1000));
       onLogin?.({ name: `${form.firstName} ${form.lastName}`, role: form.role as 'bidder' | 'seller' | 'admin' | 'expert' });
       navigate('/auctions');
@@ -156,8 +167,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
                 checked={form.agreeTerms} onChange={handleChange}
               />
               <span className="auth-checkbox__label">
-                I agree to the <a href="#terms" className="auth-page__switch-link">Terms of Service</a> and{' '}
-                <a href="#privacy" className="auth-page__switch-link">Privacy Policy</a>
+                I agree to the <Link to="/legal?tab=terms" className="auth-page__switch-link">Terms of Service</Link> and{' '}
+                <Link to="/legal?tab=privacy" className="auth-page__switch-link">Privacy Policy</Link>
               </span>
             </label>
             {errors.agreeTerms && <span className="auth-field__error">{errors.agreeTerms}</span>}

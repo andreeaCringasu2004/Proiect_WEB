@@ -1,16 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useData } from '../context/DataContext';
 import './AuctionPage.css';
 
-/* ── Countdown hook ── */
+
+const CATEGORIES = ['All', 'Painting', 'Sculpture', 'Photography', 'Mixed Media'];
+const SORT_OPTIONS = [
+  { value: 'ending-soon', label: 'Ending soon' },
+  { value: 'highest-bid', label: 'Highest bid' },
+  { value: 'lowest-bid', label: 'Lowest bid' },
+  { value: 'newest', label: 'Newest' },
+];
+const ITEMS_PER_PAGE = 6;
+
 const useCountdown = (target: Date) => {
   const calc = () => {
     const diff = target.getTime() - Date.now();
-    if (diff <= 0) return { h: 0, m: 0, s: 0 };
+    if (diff <= 0) return { h: 0, m: 0, s: 0, expired: true };
     return {
       h: Math.floor(diff / 3_600_000),
       m: Math.floor((diff % 3_600_000) / 60_000),
       s: Math.floor((diff % 60_000) / 1_000),
+      expired: false,
     };
   };
   const [t, setT] = React.useState(calc);
@@ -21,45 +32,47 @@ const useCountdown = (target: Date) => {
   return t;
 };
 
-const ALL_AUCTIONS = [
-  { id: 1,  title: 'Lumière dorée',     artist: 'Marie Leblanc',  category: 'Painting',    currentBid: 4200, status: 'active',   endsAt: new Date(Date.now() + 2*3600000 + 14*60000), img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80' },
-  { id: 2,  title: 'Silent Forms',      artist: 'Kenji Watanabe', category: 'Sculpture',   currentBid: 8750, status: 'active',   endsAt: new Date(Date.now() + 5*3600000 + 33*60000), img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
-  { id: 3,  title: 'Urban Abstraction', artist: 'Sofia Petrov',   category: 'Photography', currentBid: 1900, status: 'active',   endsAt: new Date(Date.now() + 11*3600000 + 5*60000), img: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&q=80' },
-  { id: 4,  title: 'Golden Hour',       artist: 'Ama Diallo',     category: 'Painting',    currentBid: 3100, status: 'upcoming', endsAt: new Date(Date.now() + 24*3600000),             img: 'https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=600&q=80' },
-  { id: 5,  title: 'Deep Waters',       artist: 'Luca Romano',    category: 'Photography', currentBid:  920, status: 'active',   endsAt: new Date(Date.now() + 3*3600000 + 20*60000),  img: 'https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600&q=80' },
-  { id: 6,  title: 'Terra Nova',        artist: 'Hana Sato',      category: 'Sculpture',   currentBid: 5500, status: 'active',   endsAt: new Date(Date.now() + 7*3600000),              img: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80' },
-  { id: 7,  title: 'Midnight Canvas',   artist: 'Arjun Mehta',    category: 'Painting',    currentBid: 2300, status: 'upcoming', endsAt: new Date(Date.now() + 48*3600000),             img: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80' },
-  { id: 8,  title: 'Fragile Geometry',  artist: 'Ines Moreau',    category: 'Mixed Media', currentBid: 1450, status: 'active',   endsAt: new Date(Date.now() + 1*3600000 + 45*60000),  img: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=600&q=80' },
-  { id: 9,  title: 'Echoes of Blue',    artist: 'Theo Andersen',  category: 'Painting',    currentBid: 6800, status: 'active',   endsAt: new Date(Date.now() + 9*3600000),              img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80' },
-];
-
-const CATEGORIES   = ['All', 'Painting', 'Sculpture', 'Photography', 'Mixed Media'];
-const SORT_OPTIONS = [
-  { value: 'ending-soon', label: 'Ending soon' },
-  { value: 'highest-bid', label: 'Highest bid' },
-  { value: 'lowest-bid',  label: 'Lowest bid'  },
-  { value: 'newest',      label: 'Newest'       },
-];
-const ITEMS_PER_PAGE = 6;
-
-/* ── Auction Card ── */
-const AuctionCard: React.FC<(typeof ALL_AUCTIONS)[0]> = ({
-  id, title, artist, category, currentBid, status, endsAt, img,
+interface CardProps {
+  id: number;
+  title: string;
+  artist: string;
+  category: string;
+  currentBid: number;
+  bidsCount: number;
+  status: string;
+  endsAt: string;
+  image: string;
+}
+const AuctionCard: React.FC<CardProps> = ({
+  id, title, artist, category, currentBid, bidsCount, status, endsAt, image,
 }) => {
-  const { h, m, s } = useCountdown(endsAt);
-  const urgent = h === 0 && m < 10;
+  const { h, m, s, expired } = useCountdown(new Date(endsAt));
+  const urgent = !expired && h === 0 && m < 10;
+
+  let computedStatus = status;
+  let statusText = status === 'active' ? '● Live' : status === 'sold' ? '● Sold' : '◯ Upcoming';
+
+  if (status === 'active' && expired) {
+    if (bidsCount > 0) {
+      computedStatus = 'sold';
+      statusText = '● Sold';
+    } else {
+      computedStatus = 'upcoming';
+      statusText = '◯ Upcoming';
+    }
+  }
 
   return (
     <article className="auction-card">
       <div className="auction-card__img-wrap">
-        <img src={img} alt={title} className="auction-card__img" loading="lazy" />
-        <span className={`auction-card__status auction-card__status--${status}`}>
-          {status === 'active' ? '● Live' : '◯ Upcoming'}
+        <img src={image} alt={title} className="auction-card__img" loading="lazy" />
+        <span className={`auction-card__status auction-card__status--${computedStatus}`}>
+          {statusText}
         </span>
         <span className="auction-card__category-tag">{category}</span>
-        {status === 'active' && (
+        {status === 'active' && !expired && (
           <div className={`auction-card__timer ${urgent ? 'auction-card__timer--urgent' : ''}`}>
-            {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+            {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
           </div>
         )}
       </div>
@@ -71,8 +84,8 @@ const AuctionCard: React.FC<(typeof ALL_AUCTIONS)[0]> = ({
             <span className="auction-card__bid-label">Current bid</span>
             <span className="auction-card__bid">€{currentBid.toLocaleString()}</span>
           </div>
-          <Link to={`/auctions/${id}`} className="auction-card__btn">
-            {status === 'active' ? 'Bid now →' : 'View →'}
+          <Link to={`/auctions/${id}`} className={`auction-card__btn ${expired ? 'auction-card__btn--expired' : ''}`}>
+            {expired ? 'View Details' : (status === 'active' ? 'Bid now →' : 'View →')}
           </Link>
         </div>
       </div>
@@ -80,30 +93,44 @@ const AuctionCard: React.FC<(typeof ALL_AUCTIONS)[0]> = ({
   );
 };
 
-/* ── Main Page ── */
+
 const AuctionPage: React.FC = () => {
-  const [search,       setSearch]       = useState('');
-  const [category,     setCategory]     = useState('All');
-  const [sort,         setSort]         = useState('ending-soon');
-  const [statusFilter, setStatusFilter] = useState<'all'|'active'|'upcoming'>('all');
-  const [page,         setPage]         = useState(1);
-  const [filtersOpen,  setFiltersOpen]  = useState(false);
+  const { auctions } = useData();
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('All');
+  const [sort, setSort] = useState('ending-soon');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'upcoming' | 'sold'>('all');
+  const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const resetPage = () => setPage(1);
 
   const filtered = useMemo(() => {
-    let list = [...ALL_AUCTIONS];
-    if (search)             list = list.filter(a => a.title.toLowerCase().includes(search.toLowerCase()) || a.artist.toLowerCase().includes(search.toLowerCase()));
+    let list = [...auctions];
+
+    const getComputedStatus = (a: any) => {
+      const expired = new Date(a.endsAt).getTime() < Date.now();
+      if (a.status === 'active' && expired) {
+        return a.bidsCount > 0 ? 'sold' : 'upcoming';
+      }
+      return a.status;
+    };
+
+    if (search) list = list.filter(a => a.title.toLowerCase().includes(search.toLowerCase()) || a.artist.toLowerCase().includes(search.toLowerCase()));
     if (category !== 'All') list = list.filter(a => a.category === category);
-    if (statusFilter !== 'all') list = list.filter(a => a.status === statusFilter);
-    if (sort === 'ending-soon')  list.sort((a,b) => a.endsAt.getTime() - b.endsAt.getTime());
-    else if (sort === 'highest-bid') list.sort((a,b) => b.currentBid - a.currentBid);
-    else if (sort === 'lowest-bid')  list.sort((a,b) => a.currentBid - b.currentBid);
+
+    if (statusFilter !== 'all') {
+      list = list.filter(a => getComputedStatus(a) === statusFilter);
+    }
+
+    if (sort === 'ending-soon') list.sort((a, b) => new Date(a.endsAt).getTime() - new Date(b.endsAt).getTime());
+    else if (sort === 'highest-bid') list.sort((a, b) => b.currentBid - a.currentBid);
+    else if (sort === 'lowest-bid') list.sort((a, b) => a.currentBid - b.currentBid);
     return list;
-  }, [search, category, sort, statusFilter]);
+  }, [search, category, sort, statusFilter, auctions]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const paginated  = filtered.slice((page-1)*ITEMS_PER_PAGE, page*ITEMS_PER_PAGE);
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const hasActiveFilters = search || category !== 'All' || statusFilter !== 'all';
 
@@ -144,7 +171,7 @@ const AuctionPage: React.FC = () => {
             >
               <span>Filters</span>
               <svg className="af-toggle__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none">
-                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
               {hasActiveFilters && <span className="af-toggle__dot" />}
             </button>
@@ -152,39 +179,46 @@ const AuctionPage: React.FC = () => {
 
           {/* Collapsible panel */}
           <div className={`af-panel ${filtersOpen ? 'af-panel--open' : ''}`}>
-            {/* Category pills */}
-            <div className="af-pills">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  className={`af-pill ${category === cat ? 'af-pill--active' : ''}`}
-                  onClick={() => { setCategory(cat); resetPage(); }}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Status tabs + sort */}
             <div className="af-controls">
-              <div className="af-status-tabs">
-                {(['all','active','upcoming'] as const).map(s => (
-                  <button
-                    key={s}
-                    className={`af-status-tab ${statusFilter === s ? 'af-status-tab--active' : ''}`}
-                    onClick={() => { setStatusFilter(s); resetPage(); }}
-                  >
-                    {s === 'all' ? 'All' : s === 'active' ? '● Live' : '◯ Upcoming'}
-                  </button>
-                ))}
+              {/* Category Dropdown */}
+              <div className="af-filter-group">
+                <label className="af-filter-label">Category</label>
+                <select
+                  className="af-select"
+                  value={category}
+                  onChange={e => { setCategory(e.target.value); resetPage(); }}
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
-              <select
-                className="af-sort"
-                value={sort}
-                onChange={e => { setSort(e.target.value); resetPage(); }}
-              >
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+
+              {/* Status Dropdown */}
+              <div className="af-filter-group">
+                <label className="af-filter-label">Status</label>
+                <select
+                  className="af-select"
+                  value={statusFilter}
+                  onChange={e => { setStatusFilter(e.target.value as any); resetPage(); }}
+                >
+                  {(['all', 'active', 'upcoming', 'sold'] as const).map(s => (
+                    <option key={s} value={s}>
+                      {s === 'all' ? 'All statuses' : s === 'active' ? '● Live' : s === 'sold' ? '● Sold / Ended' : '◯ Upcoming'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="af-filter-group">
+                <label className="af-filter-label">Sort by</label>
+                <select
+                  className="af-select"
+                  value={sort}
+                  onChange={e => { setSort(e.target.value); resetPage(); }}
+                >
+                  {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -217,13 +251,13 @@ const AuctionPage: React.FC = () => {
 
           {totalPages > 1 && (
             <div className="auctions-pagination">
-              <button className="auctions-pagination__btn" disabled={page===1} onClick={() => setPage(p=>p-1)}>← Prev</button>
+              <button className="auctions-pagination__btn" disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Prev</button>
               <div className="auctions-pagination__pages">
-                {Array.from({length:totalPages},(_,i)=>i+1).map(p=>(
-                  <button key={p} className={`auctions-pagination__page ${page===p?'auctions-pagination__page--active':''}`} onClick={()=>setPage(p)}>{p}</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button key={p} className={`auctions-pagination__page ${page === p ? 'auctions-pagination__page--active' : ''}`} onClick={() => setPage(p)}>{p}</button>
                 ))}
               </div>
-              <button className="auctions-pagination__btn" disabled={page===totalPages} onClick={() => setPage(p=>p+1)}>Next →</button>
+              <button className="auctions-pagination__btn" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next →</button>
             </div>
           )}
         </div>

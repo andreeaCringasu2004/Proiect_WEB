@@ -167,43 +167,51 @@ Deschide [http://localhost:3000](http://localhost:3000) în browser.
 
 ---
 
-# GCreating frontend using mockup data with React
+---
 
-## Available Scripts
+## 8. Manual de Utilizare (Ghid de pornire de la ZERO)
 
-In the project directory, you can run:
+Dacă ai descărcat acest proiect sub formă de arhivă ZIP, urmează acești pași pentru a-l rula corect pe mașina ta locală:
 
-### `npm start`
+### Pasul 1: Pregătirea Mediului
+Asigură-te că ai instalat **Node.js** (versiunea 16 sau mai mare) și **npm** pe calculator. Poți verifica rulând în terminal:
+```bash
+node -v
+npm -v
+```
 
-Runs the app in the development mode.
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Pasul 2: Extragerea și Instalarea
+1. Extrage conținutul arhivei ZIP într-un folder dedicat.
+2. Deschide un terminal (sau Command Prompt / PowerShell) în acel folder.
+3. Instalează toate dependențele necesare rulând:
+```bash
+npm install
+```
 
-The page will reload if you make edits.
-You will also see any lint errors in the console.
+### Pasul 3: Pornirea Aplicației (Frontend)
+După terminarea instalării, pornește serverul de dezvoltare:
+```bash
+npm start
+```
+Aplicația se va deschide automat la adresa [http://localhost:3000](http://localhost:3000).
 
-### `npm test`
+### Pasul 4: Pornirea Serverului de Chat (WebSocket) - Opțional
+Pentru ca funcționalitatea de Chat și Bidding în timp real să fie activă între mai multe ferestre de browser, trebuie să pornești manual serverul de WebSocket:
+1. Deschide un **AL DOILEA** terminal în folderul proiectului.
+2. Rulează comanda:
+```bash
+node websocket-server.js
+```
+*Notă: Dacă nu pornești acest server, aplicația va funcționa în continuare, dar chat-ul nu va trimite mesaje în timp real către alte instanțe.*
 
-Launches the test runner in the interactive watch mode.
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Pasul 5: Ghid de Testare (Quick Start)
+Pentru a explora toate funcționalitățile, poți testa cele 5 roluri astfel:
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-> **Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1.  **Guest (Vizitator)**: Accesează direct [http://localhost:3000/auctions](http://localhost:3000/auctions). Poți vedea produsele, dar nu poți licita.
+2.  **Bidder (Licitator)**: Mergi la `/register`, alege rolul "Bidder". Acum poți adăuga la Watchlist și poți licita (după ce introduci datele unui card în modalul de plată).
+3.  **Seller (Vânzător)**: Înregistrează-te ca "Seller". Din dashboard, poți propune o lucrare nouă spre vânzare.
+4.  **Expert**: Înregistrează-te ca "Expert". Vei vedea lucrările depuse de Selleri și le poți categorisi sau le poți seta prețul de pornire.
+5.  **Admin**: Înregistrează-te ca "Admin". Vei avea acces la statistici globale, managementul utilizatorilor și log-uri de audit.
 
 ---
+*Proiect realizat pentru evaluarea de student Crîngașu Andreea-Gabriela, grupa C113D.*

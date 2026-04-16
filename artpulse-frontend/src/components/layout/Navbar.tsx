@@ -10,7 +10,21 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const [zoom, setZoom] = useState(localStorage.getItem('zoom') || 'normal');
   const location = useLocation();
+
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-zoom', zoom);
+    localStorage.setItem('zoom', zoom);
+  }, [zoom]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -46,6 +60,9 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
           <li><Link to="/auctions" className={`navbar__link ${isActive('/auctions') ? 'navbar__link--active' : ''}`}>Auctions</Link></li>
           <li><Link to="/categories" className={`navbar__link ${isActive('/categories') ? 'navbar__link--active' : ''}`}>Categories</Link></li>
           <li><Link to="/info" className={`navbar__link ${isActive('/info') ? 'navbar__link--active' : ''}`}>Info</Link></li>
+          {user?.role === 'bidder' && (
+            <li><Link to="/purchases" className={`navbar__link ${isActive('/purchases') ? 'navbar__link--active' : ''}`}>My Purchases</Link></li>
+          )}
           {user?.role === 'seller' && (
             <li><Link to="/seller/dashboard" className={`navbar__link ${isActive('/seller/dashboard') ? 'navbar__link--active' : ''}`}>My Listings</Link></li>
           )}
@@ -57,8 +74,38 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
           )}
         </ul>
 
-        {/* Auth area */}
+        {/* Auth & Settings area */}
         <div className="navbar__auth">
+          {/* Settings Dropdown */}
+          <div className="navbar__settings">
+            <button
+              className="navbar__btn navbar__btn--ghost navbar__settings-btn"
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              title="Settings"
+            >
+              ⚙️
+            </button>
+            {settingsOpen && (
+              <div className="navbar__settings-dropdown">
+                <div className="navbar__settings-group">
+                  <div className="navbar__settings-label">Theme</div>
+                  <div className="navbar__settings-options">
+                    <button className={`navbar__settings-opt ${theme === 'light' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setTheme('light')}>Light</button>
+                    <button className={`navbar__settings-opt ${theme === 'dark' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setTheme('dark')}>Dark</button>
+                  </div>
+                </div>
+                <div className="navbar__settings-group">
+                  <div className="navbar__settings-label">Format Size</div>
+                  <div className="navbar__settings-options">
+                    <button className={`navbar__settings-opt ${zoom === 'out' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('out')}>A-</button>
+                    <button className={`navbar__settings-opt ${zoom === 'normal' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('normal')}>A</button>
+                    <button className={`navbar__settings-opt ${zoom === 'in' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('in')}>A+</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {user ? (
             <div className="navbar__user">
               <span className="navbar__role-badge">{roleLabel[user.role] ?? user.role}</span>
@@ -87,7 +134,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
       <div className={`navbar__drawer ${menuOpen ? 'navbar__drawer--open' : ''}`}>
         <Link to="/auctions" className="navbar__drawer-link">Auctions</Link>
         {/* user info block*/}
-         {user && (
+        {user && (
           <div className="navbar__drawer-user">
             <div className="navbar__drawer-user__left">
               <span className="navbar__drawer-user__avatar">
@@ -104,6 +151,7 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
         )}
         <Link to="/categories" className="navbar__drawer-link">Categories</Link>
         <Link to="/info" className="navbar__drawer-link">Info</Link>
+        {user?.role === 'bidder' && <Link to="/purchases" className="navbar__drawer-link">My Purchases</Link>}
         {user?.role === 'seller' && <Link to="/seller/dashboard" className="navbar__drawer-link">My Listings</Link>}
         {user?.role === 'expert' && <Link to="/expert/review" className="navbar__drawer-link">Review</Link>}
         {user?.role === 'admin' && <Link to="/admin" className="navbar__drawer-link">Admin</Link>}
@@ -124,6 +172,25 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
             <Link to="/register" className="navbar__drawer-link navbar__drawer-link--accent">Register</Link>
           </>
         )}
+
+        <div className="navbar__drawer-divider" />
+        <div className="navbar__drawer-settings">
+          <div className="navbar__settings-group">
+            <div className="navbar__settings-label">Theme</div>
+            <div className="navbar__settings-options">
+              <button className={`navbar__settings-opt ${theme === 'light' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setTheme('light')}>Light</button>
+              <button className={`navbar__settings-opt ${theme === 'dark' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setTheme('dark')}>Dark</button>
+            </div>
+          </div>
+          <div className="navbar__settings-group" style={{ marginTop: '12px' }}>
+            <div className="navbar__settings-label">Format Size</div>
+            <div className="navbar__settings-options">
+              <button className={`navbar__settings-opt ${zoom === 'out' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('out')}>A-</button>
+              <button className={`navbar__settings-opt ${zoom === 'normal' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('normal')}>A</button>
+              <button className={`navbar__settings-opt ${zoom === 'in' ? 'navbar__settings-opt--active' : ''}`} onClick={() => setZoom('in')}>A+</button>
+            </div>
+          </div>
+        </div>
       </div>
     </nav>
   );

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import './HomePage.css';
 
-/* ── Countdown helper ── */
 const useCountdown = (target: Date) => {
   const calc = () => {
     const diff = target.getTime() - Date.now();
@@ -21,7 +20,6 @@ const useCountdown = (target: Date) => {
   return t;
 };
 
-/* ── Featured artwork mock data ── */
 const FEATURED = [
   {
     id: 1,
@@ -52,7 +50,6 @@ const FEATURED = [
   },
 ];
 
-/* ── ArtCard subcomponent ── */
 const ArtCard: React.FC<(typeof FEATURED)[0]> = ({ title, artist, category, currentBid, endsAt, img }) => {
   const { h, m, s } = useCountdown(endsAt);
   const urgent = h === 0 && m < 10;
@@ -82,7 +79,7 @@ const ArtCard: React.FC<(typeof FEATURED)[0]> = ({ title, artist, category, curr
   );
 };
 
-/* ── Access modal ── */
+
 const AccessModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -110,7 +107,6 @@ const AccessModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-/* ── Stats strip ── */
 const STATS = [
   { value: '2,400+', label: 'Works auctioned' },
   { value: '€14M+', label: 'Total sales' },
@@ -118,7 +114,6 @@ const STATS = [
   { value: '98%', label: 'Satisfaction rate' },
 ];
 
-/* ── How it works steps ── */
 const STEPS = [
   { n: '01', title: 'Discover', body: 'Browse curated works across painting, sculpture, photography and more.' },
   { n: '02', title: 'Evaluate', body: 'Each work is reviewed by a certified expert who sets a fair starting price.' },
@@ -126,7 +121,6 @@ const STEPS = [
   { n: '04', title: 'Collect', body: 'Secure your acquisition with a verified payment and receive your artwork.' },
 ];
 
-/* ── Main HomePage ── */
 const HomePage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
 

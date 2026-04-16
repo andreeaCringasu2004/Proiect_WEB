@@ -128,7 +128,7 @@ Navigare:
 ────────────────────────────────────────────────────────────────
   React 18 + TypeScript
   React Router v6
-  CSS Modules (fișier separat per pagină)
+  CSS Modules (fișier separat per pagină + fișier global)
   Google Fonts: Playfair Display, DM Sans, DM Mono
   Imagini: Unsplash CDN (fără download local)
   Fără librării UI externe (Bootstrap, MUI etc.)
@@ -136,7 +136,7 @@ Navigare:
 ────────────────────────────────────────────────────────────────
 7. TESTARE
 ────────────────────────────────────────────────────────────────
-Testat în: Google Chrome 123+, Mozilla Firefox 124+
+Testat în: Google Chrome 123+, Mozilla Firefox 124+, Microsoft Edge 123+
 Rezoluții testate: 1920px, 1440px, 1024px, 768px, 375px
 
 ═══════════════════════════════════════════════════════════════

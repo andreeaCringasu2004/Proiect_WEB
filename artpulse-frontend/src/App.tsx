@@ -7,23 +7,23 @@ import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ChatWidget from './components/ChatWidget';
 
-/* Pages */
-import HomePage        from './pages/HomePage';
-import LoginPage       from './pages/LoginPage';
-import RegisterPage    from './pages/RegisterPage';
-import AuctionPage     from './pages/AuctionPage';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import AuctionPage from './pages/AuctionPage';
 import AuctionDetailPage from './pages/AuctionDetailPage';
-import CategoriesPage  from './pages/CategoriesPage';
-import InfoPage        from './pages/InfoPage';
-import WatchlistPage   from './pages/WatchlistPage';
+import CategoriesPage from './pages/CategoriesPage';
+import InfoPage from './pages/InfoPage';
+import WatchlistPage from './pages/WatchlistPage';
 import SellerDashboard from './pages/SellerDashboard';
-import ExpertPage      from './pages/ExpertPage';
-import AdminPage       from './pages/AdminPage';
+import ExpertPage from './pages/ExpertPage';
+import AdminPage from './pages/AdminPage';
 import EditProfilePage from './pages/EditProfilePage';
+import TermsPage from './pages/TermsPage';
+import PurchasesPage from './pages/PurchasesPage';
 
 import './styles/globals.css';
 
-/* ── Protected route ── */
 interface ProtectedProps {
   children: React.ReactNode;
   allowedRoles?: string[];
@@ -36,11 +36,7 @@ const Protected: React.FC<ProtectedProps> = ({ children, allowedRoles }) => {
   return <>{children}</>;
 };
 
-/*
- * ChatWidget controller:
- * - Hidden on auth pages and admin
- * - Visible automatically for bidder / seller / expert roles
- */
+
 const ChatWidgetController: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
@@ -50,7 +46,7 @@ const ChatWidgetController: React.FC = () => {
   return <ChatWidget />;
 };
 
-/* ── Inner app ── */
+
 const AppInner: React.FC = () => {
   const { user, login, logout, isLoading } = useAuth();
   if (isLoading) return <div className="page-loading">Încărcare sesiune...</div>;
@@ -61,17 +57,18 @@ const AppInner: React.FC = () => {
 
       <Routes>
         {/* ── Public ── */}
-        <Route path="/"           element={<HomePage />} />
-        <Route path="/login"      element={<LoginPage onLogin={login} />} />
-        <Route path="/register"   element={<RegisterPage onLogin={login} />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage onLogin={login} />} />
+        <Route path="/register" element={<RegisterPage onLogin={login} />} />
 
         {/* ── Marketplace (public — Unknown products hidden by AuctionPage logic) ── */}
-        <Route path="/auctions"       element={<AuctionPage />} />
-        <Route path="/auctions/:id"   element={<AuctionDetailPage />} />
-        <Route path="/categories"     element={<CategoriesPage />} />
+        <Route path="/auctions" element={<AuctionPage />} />
+        <Route path="/auctions/:id" element={<AuctionDetailPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
 
         {/* ── Info / Contact (public) ── */}
         <Route path="/info" element={<InfoPage />} />
+        <Route path="/legal" element={<TermsPage />} />
 
         {/* ── Authenticated: any logged-in user ── */}
         <Route path="/profile/edit" element={
@@ -80,10 +77,15 @@ const AppInner: React.FC = () => {
           </Protected>
         } />
 
-        {/* ── Bidder: watchlist ── */}
+        {/* ── Bidder: watchlist & purchases ── */}
         <Route path="/watchlist" element={
           <Protected allowedRoles={['bidder', 'seller', 'expert', 'admin']}>
             <WatchlistPage />
+          </Protected>
+        } />
+        <Route path="/purchases" element={
+          <Protected allowedRoles={['bidder']}>
+            <PurchasesPage />
           </Protected>
         } />
 
