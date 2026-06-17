@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { auctionService } from '../services/auctionService';
+import { favoriteService } from '../services/favoriteService';
 import PaymentModal from '../components/PaymentModal';
 import './AuctionDetailPage.css';
 
@@ -110,28 +112,37 @@ const Gallery: React.FC<GalleryProps> = ({ images }) => {
 const AuctionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { auctions, bids, placeBid, products, purchasedIds, markAsPurchased } = useData();
+  const { auctions, bids, placeBid, products, purchasedIds, markAsPurchased, setActiveChatId, setBids } = useData();
   const navigate = useNavigate();
 
   const numId = Number(id) || DEFAULT_ID;
-  let auction = auctions.find(a => a.id === numId);
+  const foundAuction = auctions.find(a => a.id === numId);
+  let tempAuction = foundAuction;
 
-  if (!auction) {
+  if (!tempAuction) {
     const dbProd = products.find(p => p.id === numId);
     if (dbProd) {
-      auction = {
+      tempAuction = {
         id: dbProd.id, title: dbProd.title, artist: 'Internal Submittal', category: 'Pending',
         currentBid: dbProd.suggestedPrice || 1000, endsAt: new Date(Date.now() + 3600000).toISOString(),
         status: 'active', bidsCount: 0, image: dbProd.images[0], startingBid: 500, description: '', year: 2023, medium: '', dimensions: '', condition: ''
       };
     } else {
-      auction = auctions[0];
+      tempAuction = auctions[0] || {
+        id: 0, title: 'No Auction', artist: '', category: '',
+        currentBid: 0, endsAt: new Date().toISOString(),
+        status: 'upcoming', bidsCount: 0, image: '', startingBid: 0
+      };
     }
   }
 
+  const auction = tempAuction;
+
   const product = products.find(p => p.id === auction?.productId || p.title === auction?.title);
-  const galleryImages = product && product.images.length > 0 ? product.images : [auction!.image];
   const auctionBids = bids.filter(b => b.auctionId === auction!.id);
+  const highestBid = auctionBids.length > 0 
+    ? Math.max(...auctionBids.map(b => b.amount)) 
+    : auction!.currentBid;
   const lastBid = auctionBids[0];
   const isPurchased = purchasedIds.includes(numId);
   const userIsWinner = auction.status === 'sold' &&
@@ -143,6 +154,38 @@ const AuctionDetailPage: React.FC = () => {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+
+  const prodId = product?.id || auction.productId || auction.id;
+
+  useEffect(() => {
+    if (auction) {
+      setActiveChatId(prodId);
+    }
+    return () => {
+      setActiveChatId(-1);
+    };
+  }, [auction, prodId, setActiveChatId]);
+
+  useEffect(() => {
+    if (!user || !prodId) {
+      setWatchlisted(false);
+      return;
+    }
+    favoriteService.getFavorites()
+      .then(favIds => {
+        setWatchlisted(favIds.includes(prodId));
+      })
+      .catch(err => console.warn('Failed to load favorites:', err));
+  }, [user, prodId]);
+
+  useEffect(() => {
+    auctionService.getBidsForAuction(numId).then(backendBids => {
+      setBids(prev => {
+        const filtered = prev.filter(b => b.auctionId !== numId);
+        return [...backendBids, ...filtered];
+      });
+    }).catch(err => console.warn('Failed to load bids from backend:', err));
+  }, [numId, setBids]);
 
   const endsAtDate = new Date(auction!.endsAt);
   const countdown = useCountdown(endsAtDate);
@@ -157,8 +200,8 @@ const AuctionDetailPage: React.FC = () => {
   const handlePlaceBid = () => {
     if (!user) { navigate('/login'); return; }
     const val = parseInt(bidInput);
-    if (!val || val < (auction!.currentBid + 100)) {
-      showToast(`Bid must be at least €${(auction!.currentBid + 100).toLocaleString()}`);
+    if (!val || val <= highestBid) {
+      showToast(`Bid must be greater than €${highestBid.toLocaleString()}`);
       return;
     }
     placeBid(auction!.id, user.name, val);
@@ -171,6 +214,7 @@ const AuctionDetailPage: React.FC = () => {
     setBidInput(String(amount));
   };
 
+  const galleryImages = [auction.image, ...(product?.images || []).filter(img => img !== auction.image)];
   const related = auctions.filter(a => a.id !== auction!.id).slice(0, 3);
 
   return (
@@ -188,7 +232,7 @@ const AuctionDetailPage: React.FC = () => {
           <Gallery images={galleryImages} />
           <section className="ad-desc">
             <h3 className="ad-desc__heading">About This Work</h3>
-            {auction!.description?.split('\n\n').map((para, i) => (
+            {(auction.description || '').split('\n\n').map((para: string, i: number) => (
               <p key={i} className="ad-desc__para">{para}</p>
             ))}
             <div className="ad-desc__divider"><span>Provenance &amp; Details</span></div>
@@ -239,7 +283,7 @@ const AuctionDetailPage: React.FC = () => {
               </div>
               <div className="ad-price-block">
                 <span className="ad-price-label">{auction.status === 'sold' ? 'Winning Bid' : 'Current Bid'}</span>
-                <span className="ad-price-val ad-price-val--current">€{auction.currentBid.toLocaleString()}</span>
+                <span className="ad-price-val ad-price-val--current">€{highestBid.toLocaleString()}</span>
               </div>
             </div>
 
@@ -270,7 +314,7 @@ const AuctionDetailPage: React.FC = () => {
 
             {auction.status === 'active' && !countdown.expired && (
               <div className="ad-quick-bids">
-                {[auction.currentBid + 100, auction.currentBid + 500, auction.currentBid + 1000].map(amt => (
+                {[highestBid + 100, highestBid + 500, highestBid + 1000].map(amt => (
                   <button key={amt} className="ad-quick-bid" onClick={() => handleQuickBid(amt)}>€{amt.toLocaleString()}</button>
                 ))}
               </div>
@@ -283,7 +327,7 @@ const AuctionDetailPage: React.FC = () => {
                   <input
                     type="number"
                     className="ad-bid-input"
-                    placeholder={`Min €${(auction.currentBid + 100).toLocaleString()}`}
+                    placeholder={`Min €${(highestBid + 1).toLocaleString()}`}
                     value={bidInput}
                     onChange={e => setBidInput(e.target.value)}
                   />
@@ -291,7 +335,7 @@ const AuctionDetailPage: React.FC = () => {
                 <button
                   className="ad-action-btn ad-action-btn--primary"
                   onClick={handlePlaceBid}
-                  disabled={!bidInput || Number(bidInput) <= auction.currentBid}
+                  disabled={!bidInput || Number(bidInput) <= highestBid}
                 >
                   Place Bid
                 </button>
@@ -320,8 +364,21 @@ const AuctionDetailPage: React.FC = () => {
               className={`ad-watchlist-btn ${watchlisted ? 'ad-watchlist-btn--active' : ''}`}
               onClick={() => {
                 if (!user) { showToast('Sign in to use your watchlist.'); return; }
-                setWatchlisted(w => !w);
-                showToast(watchlisted ? 'Removed from watchlist' : '♥ Added to watchlist');
+                const next = !watchlisted;
+                const targetId = auction?.productId || prodId;
+                if (targetId) {
+                  const promise = next
+                    ? favoriteService.addFavorite(targetId)
+                    : favoriteService.removeFavorite(targetId);
+                  
+                  promise.then(() => {
+                    setWatchlisted(next);
+                    showToast(next ? '♥ Added to watchlist' : 'Removed from watchlist');
+                  }).catch(err => {
+                    console.warn('Failed to update favorite:', err);
+                    showToast('Error updating watchlist.');
+                  });
+                }
               }}
             >
               {watchlisted ? '♥  In Watchlist' : '♡  Add to Watchlist'}
@@ -349,7 +406,7 @@ const AuctionDetailPage: React.FC = () => {
             {userIsWinner && !isPurchased && (
               <div className="ad-winner-box animate-fade-up">
                 <h3>🎉 You won!</h3>
-                <p>Confirm your purchase of <strong>{auction.title}</strong> for <strong>€{auction.currentBid.toLocaleString()}</strong>.</p>
+                <p>Confirm your purchase of <strong>{auction.title}</strong> for <strong>€{highestBid.toLocaleString()}</strong>.</p>
                 <button className="ad-pay-btn" onClick={() => setShowPayment(true)}>
                   Secure Checkout →
                 </button>
@@ -361,7 +418,7 @@ const AuctionDetailPage: React.FC = () => {
 
       {showPayment && (
         <PaymentModal
-          amount={auction.currentBid}
+          amount={highestBid}
           onClose={() => setShowPayment(false)}
           onSuccess={() => {
             markAsPurchased(numId);

@@ -76,6 +76,20 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
 
         {/* Auth & Settings area */}
         <div className="navbar__auth">
+          {user ? (
+            <div className="navbar__user">
+              <span className="navbar__role-badge">{roleLabel[user.role] ?? user.role}</span>
+              <span className="navbar__user-name">{user.name}</span>
+              <Link to="/profile/edit" className="navbar__btn navbar__btn--ghost" style={{ padding: '6px 12px', fontSize: '14px' }}>Profile</Link>
+              <button className="navbar__logout" onClick={onLogout}>Sign out</button>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="navbar__btn navbar__btn--ghost">Sign in</Link>
+              <Link to="/register" className="navbar__btn navbar__btn--primary">Register</Link>
+            </>
+          )}
+
           {/* Settings Dropdown */}
           <div className="navbar__settings">
             <button
@@ -105,19 +119,6 @@ const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
               </div>
             )}
           </div>
-
-          {user ? (
-            <div className="navbar__user">
-              <span className="navbar__role-badge">{roleLabel[user.role] ?? user.role}</span>
-              <span className="navbar__user-name">{user.name}</span>
-              <button className="navbar__logout" onClick={onLogout}>Sign out</button>
-            </div>
-          ) : (
-            <>
-              <Link to="/login" className="navbar__btn navbar__btn--ghost">Sign in</Link>
-              <Link to="/register" className="navbar__btn navbar__btn--primary">Register</Link>
-            </>
-          )}
         </div>
 
         {/* Hamburger */}

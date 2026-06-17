@@ -25,13 +25,11 @@ interface ChatWidgetProps {
 
 const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
   const { user } = useAuth();
-  const { messages, addMessage, users } = useData();
+  const { messages, addMessage, updateMessage, users, activeChatId, wsStatus } = useData();
   const [open, setOpen] = useState(false);
   const [minimised, setMinimised] = useState(false);
   const [input, setInput] = useState('');
   const [unread, setUnread] = useState(0);
-  const [wsStatus] = useState<'online' | 'offline'>('online');
-  const [currentChannelId] = useState(initialProductId);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +37,27 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
   const isExpert = user?.role === 'expert';
   const quickReplies = isExpert ? EXPERT_QUICK : BIDDER_QUICK;
 
-  const filteredMessages = messages.filter(m => m.productId === currentChannelId);
+  const getUserRole = (id: number): string => {
+    if (id === 0) return 'expert'; // Support
+    if (id === 100) return 'admin';
+    const u = users.find(x => x.id === id);
+    return u ? u.role : 'bidder';
+  };
+
+  const filteredMessages = messages.filter(m => {
+    if (m.productId !== activeChatId) return false;
+
+    const senderRole = getUserRole(m.fromId);
+    const isOwnMessage = m.fromId === user?.id;
+
+    // Messages written by bidders: only visible to the sender bidder itself and the admin.
+    if (senderRole === 'bidder') {
+      return isOwnMessage || user?.role === 'admin';
+    }
+
+    // Messages written by admin, expert, or seller: visible to everyone.
+    return true;
+  });
 
 
   useEffect(() => {
@@ -65,7 +83,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
 
     addMessage({
       id: Date.now(),
-      productId: currentChannelId,
+      productId: activeChatId,
       fromId: user.id || 0,
       toId: 0,
       text: msgText,
@@ -97,8 +115,8 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
     <>
       {!open && (
         <button className="chat-fab" onClick={handleOpen} title="Open Chat">
-          <span className="chat-fab__icon">{currentChannelId === -1 ? '💬' : '🖼'}</span>
-          <span className="chat-fab__label">{currentChannelId === -1 ? 'Expert Q&A' : 'Work Chat'}</span>
+          <span className="chat-fab__icon">{activeChatId === -1 ? '💬' : '🖼'}</span>
+          <span className="chat-fab__label">{activeChatId === -1 ? 'Expert Q&A' : 'Work Chat'}</span>
           {unread > 0 && <span className="chat-fab__badge">{unread}</span>}
         </button>
       )}
@@ -107,14 +125,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
         <div className={`chat-window ${minimised ? 'chat-window--minimised' : ''}`}>
           <div className="chat-header" onClick={minimised ? handleMinimise : undefined}>
             <div className="chat-header__info">
-              <div className="chat-header__avatar">{currentChannelId === -1 ? '🏫' : '🖼'}</div>
+              <div className="chat-header__avatar">{activeChatId === -1 ? '🏫' : '🖼'}</div>
               <div>
                 <div className="chat-header__title">
-                  {currentChannelId === -1 ? 'ArtPulse Expert Q&A' : 'Technical Discussion'}
+                  {activeChatId === -1 ? 'ArtPulse Expert Q&A' : 'Technical Discussion'}
                 </div>
                 <div className="chat-header__sub">
                   <span className={`chat-ws-dot chat-ws-dot--${wsStatus}`} />
-                  {currentChannelId === -1 ? 'Public Channel' : `Lot #${currentChannelId}`}
+                  {activeChatId === -1 ? 'Public Channel' : `Lot #${activeChatId}`}
                 </div>
               </div>
             </div>
@@ -136,9 +154,14 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ initialProductId = -1 }) => {
                       <div className="chat-msg__content">
                         {!isOwn && <span className="chat-msg__sender">{senderName}</span>}
                         <div className={`chat-msg__bubble ${isOwn ? 'chat-msg__bubble--own' : ''}`}>
-                          {msg.text}
+                          {msg.isDeleted ? <em style={{opacity: 0.7}}>Message deleted</em> : msg.text}
                         </div>
-                        <span className="chat-msg__time">{msg.time}</span>
+                        <div className="chat-msg__time" style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px'}}>
+                          <span>{msg.time}</span>
+                          {isOwn && !msg.isDeleted && (
+                            <button onClick={() => updateMessage(msg.id, { isDeleted: true })} style={{fontSize: '10px', color: 'var(--rust)', background: 'none', border: 'none', cursor: 'pointer'}}>Delete</button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

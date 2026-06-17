@@ -63,6 +63,22 @@
   --surface-alt: #1A1816;
 }
 
+[data-theme="dark"] .wl-header,
+[data-theme="dark"] .cat-hero,
+[data-theme="dark"] .info-hero,
+[data-theme="dark"] .seller-dashboard-header,
+[data-theme="dark"] .expert-page__header,
+[data-theme="dark"] .auth-hero {
+  background: #0f0e0c !important;
+  color: #f7f4ef !important;
+}
+
+[data-theme="dark"] .wl-header__eyebrow,
+[data-theme="dark"] .cat-hero__eyebrow,
+[data-theme="dark"] .info-hero__eyebrow {
+  color: #D4A75A !important;
+}
+
 [data-zoom="in"] {
   zoom: 1.1;
 }

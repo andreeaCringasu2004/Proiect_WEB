@@ -12,7 +12,7 @@ const PurchasesPage: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
-  const myPurchases = auctions.filter(a => purchasedIds.includes(a.id));
+  const myPurchases = auctions.filter(a => purchasedIds.includes(a.id) && a.winnerName === user.name);
 
   return (
     <main className="wl-page">

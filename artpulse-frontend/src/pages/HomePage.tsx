@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import './HomePage.css';
 
 const useCountdown = (target: Date) => {
-  const calc = () => {
+  const [t, setT] = useState(() => {
     const diff = target.getTime() - Date.now();
     if (diff <= 0) return { h: 0, m: 0, s: 0 };
     return {
@@ -11,12 +13,24 @@ const useCountdown = (target: Date) => {
       m: Math.floor((diff % 3_600_000) / 60_000),
       s: Math.floor((diff % 60_000) / 1_000),
     };
-  };
-  const [t, setT] = useState(calc);
-  useEffect(() => {
-    const id = setInterval(() => setT(calc()), 1000);
-    return () => clearInterval(id);
   });
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const diff = target.getTime() - Date.now();
+      if (diff <= 0) {
+        setT({ h: 0, m: 0, s: 0 });
+      } else {
+        setT({
+          h: Math.floor(diff / 3_600_000),
+          m: Math.floor((diff % 3_600_000) / 60_000),
+          s: Math.floor((diff % 60_000) / 1_000),
+        });
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
   return t;
 };
 
@@ -50,14 +64,16 @@ const FEATURED = [
   },
 ];
 
-const ArtCard: React.FC<(typeof FEATURED)[0]> = ({ title, artist, category, currentBid, endsAt, img }) => {
-  const { h, m, s } = useCountdown(endsAt);
+const ArtCard: React.FC<any> = ({ title, artist, category, currentBid, endsAt, img, image }) => {
+  const targetDate = typeof endsAt === 'string' ? new Date(endsAt) : endsAt;
+  const { h, m, s } = useCountdown(targetDate);
   const urgent = h === 0 && m < 10;
+  const displayImg = img || image;
 
   return (
     <article className="art-card">
       <div className="art-card__img-wrap">
-        <img src={img} alt={title} className="art-card__img" loading="lazy" />
+        <img src={displayImg} alt={title} className="art-card__img" loading="lazy" />
         <span className="art-card__category">{category}</span>
         <div className={`art-card__timer ${urgent ? 'art-card__timer--urgent' : ''}`}>
           {urgent && <span className="art-card__timer-dot" />}
@@ -104,6 +120,44 @@ const AccessModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ForYouSection: React.FC = () => {
+  const { user } = useAuth();
+  const { auctions, bids } = useData();
+
+  if (!user) return null;
+
+  // Find categories the user has bid on or won
+  const userBids = bids.filter(b => b.bidder === user.name);
+  const preferredCategories = new Set<string>();
+  userBids.forEach(b => {
+    const auc = auctions.find(a => a.id === b.auctionId);
+    if (auc && auc.category) preferredCategories.add(auc.category);
+  });
+
+  // Fallback to Featured if no history
+  const recommendations = auctions
+    .filter(a => a.status === 'active' && (preferredCategories.size === 0 || preferredCategories.has(a.category)))
+    .slice(0, 3);
+
+  if (recommendations.length === 0) return null;
+
+  return (
+    <section className="section featured" style={{ background: 'var(--cream-dark)', paddingBottom: '20px' }}>
+      <div className="container">
+        <div className="section__head">
+          <div>
+            <span className="section__eyebrow" style={{ color: 'var(--sage)' }}>✨ Recommended for you</span>
+            <h2 className="section__title">Based on your activity</h2>
+          </div>
+        </div>
+        <div className="art-grid">
+          {recommendations.map(item => <ArtCard key={item.id} {...(item as any)} />)}
+        </div>
+      </div>
+    </section>
   );
 };
 
@@ -189,6 +243,9 @@ const HomePage: React.FC = () => {
           ))}
         </div>
       </section>
+
+      {/* For You / Recommendations */}
+      <ForYouSection />
 
       {/* Featured auctions */}
       <section className="section featured" id="featured">

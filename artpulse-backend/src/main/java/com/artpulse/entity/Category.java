@@ -1,9 +1,11 @@
 package com.artpulse.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "categories")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Category {
 
     @Id
@@ -13,8 +15,9 @@ public class Category {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "created_by_expert_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User createdByExpert;
 
     public Long getId() { return id; }

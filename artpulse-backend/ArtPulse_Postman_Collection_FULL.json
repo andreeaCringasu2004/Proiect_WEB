@@ -1,0 +1,151 @@
+{
+  "info": {
+    "name": "ArtPulse API - Complete Collection",
+    "_postman_id": "artpulse-2026-final",
+    "description": "Colectia completa de endpoint-uri pentru platforma ArtPulse. Backend: Spring Boot pe portul 8081. Autentificare: Bearer JWT Token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8081/api", "type": "string" },
+    { "key": "jwt_token", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login - Admin",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { var data = pm.response.json(); pm.collectionVariables.set('jwt_token', data.token); console.log('Token salvat:', data.token); }"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"admin@artpulse.com\",\"password\":\"12345678\"}" }, "url": "{{base_url}}/auth/login" }
+        },
+        {
+          "name": "Login - Expert",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { var data = pm.response.json(); pm.collectionVariables.set('jwt_token', data.token); }"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"expert1@artpulse.com\",\"password\":\"12345678\"}" }, "url": "{{base_url}}/auth/login" }
+        },
+        {
+          "name": "Login - Seller",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { var data = pm.response.json(); pm.collectionVariables.set('jwt_token', data.token); }"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"seller1@artpulse.com\",\"password\":\"12345678\"}" }, "url": "{{base_url}}/auth/login" }
+        },
+        {
+          "name": "Login - Bidder",
+          "event": [{ "listen": "test", "script": { "exec": ["if (pm.response.code === 200) { var data = pm.response.json(); pm.collectionVariables.set('jwt_token', data.token); }"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"bidder1@artpulse.com\",\"password\":\"12345678\"}" }, "url": "{{base_url}}/auth/login" }
+        },
+        {
+          "name": "Register - New User",
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"newuser@test.com\",\"password\":\"Test1234!\",\"fullName\":\"Test User\",\"role\":\"BIDDER\"}" }, "url": "{{base_url}}/auth/register" }
+        },
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/auth/logout" }
+        },
+        {
+          "name": "Change Password",
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "body": { "mode": "raw", "raw": "{\"currentPassword\":\"12345678\",\"newPassword\":\"NewPass@2026\"}" }, "url": "{{base_url}}/auth/change-password" }
+        },
+        {
+          "name": "Forgot Password",
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "body": { "mode": "raw", "raw": "{\"email\":\"bidder1@artpulse.com\"}" }, "url": "{{base_url}}/auth/forgot-password" }
+        }
+      ]
+    },
+    {
+      "name": "Auctions (Public)",
+      "item": [
+        {
+          "name": "Get All Auctions",
+          "request": { "method": "GET", "url": "{{base_url}}/auctions" }
+        },
+        {
+          "name": "Get Active Auctions",
+          "request": { "method": "GET", "url": "{{base_url}}/auctions/active" }
+        },
+        {
+          "name": "Get Auction by ID",
+          "request": { "method": "GET", "url": "{{base_url}}/auctions/1" }
+        },
+        {
+          "name": "Get Bids for Auction",
+          "request": { "method": "GET", "url": "{{base_url}}/auctions/1/bids" }
+        },
+        {
+          "name": "Place Bid (Authenticated)",
+          "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "body": { "mode": "raw", "raw": "{\"amount\":5000}" }, "url": "{{base_url}}/auctions/1/bid" }
+        }
+      ]
+    },
+    {
+      "name": "Products (Public + Role)",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": { "method": "GET", "url": "{{base_url}}/products" }
+        },
+        {
+          "name": "Get Active Products",
+          "request": { "method": "GET", "url": "{{base_url}}/products/active" }
+        },
+        {
+          "name": "Get Pending Products (Expert/Admin)",
+          "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/products/pending" }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": { "method": "GET", "url": "{{base_url}}/products/12" }
+        },
+        {
+          "name": "Get Products by Seller",
+          "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/products/seller/103" }
+        },
+        {
+          "name": "Approve Product (Expert/Admin)",
+          "request": { "method": "PUT", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/products/16/approve" }
+        },
+        {
+          "name": "Reject Product (Expert/Admin)",
+          "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "body": { "mode": "raw", "raw": "{\"reason\":\"Documentele lipsa\"}" }, "url": "{{base_url}}/products/11/reject" }
+        }
+      ]
+    },
+    {
+      "name": "Users (Authenticated)",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/users/me" }
+        },
+        {
+          "name": "Get All Users (Admin only)",
+          "request": { "method": "GET", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/users/admin/all" }
+        },
+        {
+          "name": "Update User Role (Admin only)",
+          "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "body": { "mode": "raw", "raw": "{\"role\":\"EXPERT\"}" }, "url": "{{base_url}}/users/105/role" }
+        },
+        {
+          "name": "Update User Status (Admin only)",
+          "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"},{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "body": { "mode": "raw", "raw": "{\"status\":\"DEACTIVATED\"}" }, "url": "{{base_url}}/users/110/status" }
+        },
+        {
+          "name": "Delete/Deactivate User (Admin only)",
+          "request": { "method": "DELETE", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/users/111" }
+        },
+        {
+          "name": "Reset User Password (Admin only)",
+          "request": { "method": "POST", "header": [{"key":"Authorization","value":"Bearer {{jwt_token}}"}], "url": "{{base_url}}/users/105/reset-password" }
+        }
+      ]
+    },
+    {
+      "name": "Categories (Public)",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": { "method": "GET", "url": "{{base_url}}/categories" }
+        }
+      ]
+    }
+  ]
+}

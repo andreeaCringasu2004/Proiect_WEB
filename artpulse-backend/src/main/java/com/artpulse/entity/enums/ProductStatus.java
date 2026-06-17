@@ -1,5 +1,5 @@
 package com.artpulse.entity.enums;
 
 public enum ProductStatus {
-    UNKNOWN, UNDER_REVIEW, APPROVED, REJECTED
+    UNKNOWN, PENDING, UNDER_REVIEW, APPROVED, REJECTED
 }

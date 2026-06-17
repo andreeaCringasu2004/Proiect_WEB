@@ -215,3 +215,50 @@
 [data-theme="dark"] .pm-submit:hover:not(:disabled) {
   background: #eee;
 }
+
+/* Stripe-like Element */
+.pm-stripe-element {
+  display: flex;
+  align-items: center;
+  background: var(--cream-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02) inset;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pm-stripe-element:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.1);
+}
+.pm-stripe-icon {
+  font-size: 20px;
+  margin-right: 8px;
+  user-select: none;
+}
+.pm-stripe-element input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 14px 10px !important;
+  font-family: monospace;
+  font-size: 15px !important;
+}
+.pm-stripe-element input:focus {
+  box-shadow: none !important;
+}
+.pm-stripe-card {
+  flex: 1;
+}
+.pm-stripe-exp {
+  width: 75px;
+  border-left: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  text-align: center;
+}
+.pm-stripe-cvc {
+  width: 60px;
+  border-left: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  text-align: center;
+}

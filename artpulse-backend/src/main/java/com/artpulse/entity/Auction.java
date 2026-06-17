@@ -1,6 +1,7 @@
 package com.artpulse.entity;
 
 import com.artpulse.entity.enums.AuctionStatus;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,8 +15,9 @@ public class Auction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", unique = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "images", "seller", "expert", "category"})
     private Product product;
 
     @Column(name = "start_price", nullable = false)
@@ -34,12 +36,11 @@ public class Auction {
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'UPCOMING'")
     private AuctionStatus status = AuctionStatus.UPCOMING;
 
-    // Optional mapping if we want to fetch bids from auction directly
     @OneToMany(mappedBy = "auction")
+    @JsonIgnoreProperties({"auction"})
     private List<Bid> bids;
 
     // Getters and Setters
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Product getProduct() { return product; }

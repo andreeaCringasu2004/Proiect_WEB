@@ -1,5 +1,6 @@
 package com.artpulse.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -14,20 +15,21 @@ public class Bid {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auction_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "bids"})
     private Auction auction;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "bidder_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User bidder;
 
     @Column(nullable = false)
     private BigDecimal amount;
 
-    @Column(name = "bid_time", insertable = false, updatable = false)
-    private LocalDateTime bidTime;
+    @Column(name = "bid_time")
+    private LocalDateTime placedAt;
 
     // Getters and Setters
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Auction getAuction() { return auction; }
@@ -36,7 +38,6 @@ public class Bid {
     public void setBidder(User bidder) { this.bidder = bidder; }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
-    public LocalDateTime getBidTime() { return bidTime; }
-    public void setBidTime(LocalDateTime bidTime) { this.bidTime = bidTime; }
+    public LocalDateTime getPlacedAt() { return placedAt; }
+    public void setPlacedAt(LocalDateTime placedAt) { this.placedAt = placedAt; }
 }
-

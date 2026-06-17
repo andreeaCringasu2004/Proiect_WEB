@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+// @ts-ignore
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+// @ts-ignore
 import L from 'leaflet';
+
 import 'leaflet/dist/leaflet.css';
 import './InfoPage.css';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+const LMapContainer = MapContainer as any;
+const LTileLayer = TileLayer as any;
+const LMarker = Marker as any;
+const LPopup = Popup as any;
 
 const DefaultIcon = L.icon({
   iconUrl: markerIcon,
@@ -210,23 +218,23 @@ const InfoPage: React.FC = () => {
                   <div className="info-contact__map-label">📍 ArtPulse HQ · Calea Victoriei 12, Bucharest</div>
 
                   <div className="info-contact__map-container">
-                    <MapContainer
+                    <LMapContainer
                       center={[44.4326, 26.0988]}
                       zoom={15}
                       scrollWheelZoom={false}
                       className="info-leaflet-map"
                       style={{ height: '100%', width: '100%', borderRadius: '8px' }}
                     >
-                      <TileLayer
+                      <LTileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
-                      <Marker position={[44.4326, 26.0988]}>
-                        <Popup>
+                      <LMarker position={[44.4326, 26.0988]}>
+                        <LPopup>
                           ArtPulse HQ <br /> Calea Victoriei 12
-                        </Popup>
-                      </Marker>
-                    </MapContainer>
+                        </LPopup>
+                      </LMarker>
+                    </LMapContainer>
                   </div>
 
                   <a

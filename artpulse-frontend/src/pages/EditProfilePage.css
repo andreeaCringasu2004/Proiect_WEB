@@ -11,6 +11,92 @@
   padding-top: 48px;
   padding-bottom: 80px;
   align-items: start;
+  grid-template-areas:
+    'banner banner'
+    'sidebar main';
+}
+
+/* Banner resetare parola */
+.ep-reset-banner {
+  grid-area: banner;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgba(139, 58, 42, .07);
+  border: 1.5px solid rgba(139, 58, 42, .3);
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 4px;
+  animation: banner-slide-in .4s ease;
+}
+
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ep-reset-banner__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ep-reset-banner strong {
+  display: block;
+  font-size: 14.5px;
+  color: var(--rust, #8b3a2a);
+  margin-bottom: 4px;
+}
+
+.ep-reset-banner p {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ep-reset-banner code {
+  background: rgba(0,0,0,.07);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  font-family: monospace;
+  font-weight: 700;
+}
+
+.ep-reset-banner__btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 8px 16px;
+  background: var(--rust, #8b3a2a);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s;
+}
+
+.ep-reset-banner__btn:hover {
+  background: #6e2d1f;
+}
+
+/* Badge de avertizare pe nav link */
+.ep-nav__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--rust, #8b3a2a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .ep-sidebar {
@@ -154,6 +240,7 @@
 
 .ep-field {
   margin-bottom: 18px;
+  position: relative;
 }
 
 .ep-label {
@@ -180,7 +267,31 @@
   transition: border-color .2s, box-shadow .2s;
 }
 
+.ep-input::-ms-reveal,
+.ep-input::-ms-clear {
+  display: none;
+}
+
 .ep-input:focus,
+.ep-textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb, 196, 151, 74), .1);
+}
+
+.ep-pwd-toggle {
+  position: absolute;
+  right: 12px;
+  top: 36px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.ep-pwd-toggle:hover {
+  color: var(--ink);
+}
 .ep-textarea:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(var(--gold-rgb, 196, 151, 74), .1);
@@ -270,6 +381,10 @@
   .ep-wrap {
     grid-template-columns: 1fr;
     gap: 28px;
+    grid-template-areas:
+      'banner'
+      'sidebar'
+      'main';
   }
 
   .ep-sidebar {
@@ -298,5 +413,12 @@
 
   .ep-stats {
     grid-template-columns: 1fr 1fr;
+  }
+  .ep-sidebar {
+    grid-area: sidebar;
+  }
+
+  .ep-main {
+    grid-area: main;
   }
 }

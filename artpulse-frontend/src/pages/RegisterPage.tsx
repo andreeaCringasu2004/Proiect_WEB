@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../context/AuthContext';
+import { authService } from '../services/authService';
 import './AuthPages.css';
 
 type Role = 'bidder' | 'seller' | 'admin' | 'expert';
@@ -17,6 +18,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
     password: '',
     confirmPassword: '',
     role: 'bidder' as Role,
+    physicalAddress: '',
     agreeTerms: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -29,6 +31,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
       password: '',
       confirmPassword: '',
       role: 'bidder' as Role,
+      physicalAddress: '',
       agreeTerms: false,
     });
   }, []);
@@ -59,11 +62,33 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      onLogin?.({ name: `${form.firstName} ${form.lastName}`, role: form.role as 'bidder' | 'seller' | 'admin' | 'expert' });
-      navigate('/auctions');
-    } catch {
-      setErrors({ form: 'Registration failed. Please try again.' });
+      const fullName = `${form.firstName} ${form.lastName}`;
+      await authService.register(
+        form.email,
+        form.password,
+        fullName,
+        form.role,
+        form.physicalAddress.trim() || undefined
+      );
+
+      // Auto login
+      const loginRes = await authService.login(form.email, form.password);
+      const userToSet: User = {
+        id: loginRes.id,
+        email: loginRes.email,
+        name: loginRes.fullName,
+        role: loginRes.role.toLowerCase() as User['role']
+      };
+
+      onLogin?.(userToSet);
+
+      if (userToSet.role === 'admin') navigate('/admin');
+      else if (userToSet.role === 'expert') navigate('/expert/review');
+      else if (userToSet.role === 'seller') navigate('/seller/dashboard');
+      else navigate('/auctions');
+    } catch (err: any) {
+      const errMsg = err.response?.data || 'Registration failed. Please try again.';
+      setErrors({ form: typeof errMsg === 'string' ? errMsg : 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -101,6 +126,24 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
               <span className="role-btn__icon">🖼️</span>
               <span className="role-btn__label">Seller</span>
               <span className="role-btn__desc">I want to sell my work</span>
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${form.role === 'expert' ? 'role-btn--active' : ''}`}
+              onClick={() => setForm(f => ({ ...f, role: 'expert' }))}
+            >
+              <span className="role-btn__icon">🔎</span>
+              <span className="role-btn__label">Expert</span>
+              <span className="role-btn__desc">I evaluate artwork</span>
+            </button>
+            <button
+              type="button"
+              className={`role-btn ${form.role === 'admin' ? 'role-btn--active' : ''}`}
+              onClick={() => setForm(f => ({ ...f, role: 'admin' }))}
+            >
+              <span className="role-btn__icon">🔑</span>
+              <span className="role-btn__label">Admin</span>
+              <span className="role-btn__desc">System administrator</span>
             </button>
           </div>
 
@@ -159,6 +202,16 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onLogin }) => {
                 placeholder="••••••••"
               />
               {errors.confirmPassword && <span className="auth-field__error">{errors.confirmPassword}</span>}
+            </div>
+
+            <div className="auth-field">
+              <label className="auth-field__label" htmlFor="physicalAddress">Physical address (optional)</label>
+              <input
+                id="physicalAddress" name="physicalAddress" type="text"
+                value={form.physicalAddress} onChange={handleChange}
+                className="auth-field__input"
+                placeholder="123 Art St, City, Country"
+              />
             </div>
 
             <label className="auth-checkbox">

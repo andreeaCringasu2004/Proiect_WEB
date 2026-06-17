@@ -16,11 +16,11 @@ public class Message {
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receiver_id", nullable = false)
+    @JoinColumn(name = "receiver_id", nullable = true)
     private User receiver;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_context_id", nullable = false)
+    @JoinColumn(name = "product_context_id", nullable = true)
     private Product productContext;
 
     @Column(columnDefinition = "TEXT")
@@ -29,8 +29,16 @@ public class Message {
     @Column(name = "attachment_url")
     private String attachmentUrl;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "message_documents", joinColumns = @JoinColumn(name = "message_id"))
+    @Column(name = "document_url", columnDefinition = "TEXT")
+    private java.util.List<String> documents = new java.util.ArrayList<>();
+
     @Column(name = "is_appointment_proposal")
     private Boolean isAppointmentProposal = false;
+
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
 
     @Column(name = "sent_at", insertable = false, updatable = false)
     private LocalDateTime sentAt;
@@ -48,8 +56,12 @@ public class Message {
     public void setContent(String content) { this.content = content; }
     public String getAttachmentUrl() { return attachmentUrl; }
     public void setAttachmentUrl(String attachmentUrl) { this.attachmentUrl = attachmentUrl; }
+    public java.util.List<String> getDocuments() { return documents; }
+    public void setDocuments(java.util.List<String> documents) { this.documents = documents; }
     public Boolean getIsAppointmentProposal() { return isAppointmentProposal; }
     public void setIsAppointmentProposal(Boolean isAppointmentProposal) { this.isAppointmentProposal = isAppointmentProposal; }
+    public Boolean getIsDeleted() { return isDeleted; }
+    public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
     public LocalDateTime getSentAt() { return sentAt; }
     public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
 }

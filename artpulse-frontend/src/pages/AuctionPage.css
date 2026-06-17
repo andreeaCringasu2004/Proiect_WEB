@@ -319,14 +319,14 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(255, 255, 255, .92);
+  background: rgba(26, 23, 20, 0.85);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .08em;
   text-transform: uppercase;
   padding: 4px 8px;
   border-radius: 4px;
-  color: var(--ink, #1a1714);
+  color: #ffffff;
 }
 
 .auction-card__timer {

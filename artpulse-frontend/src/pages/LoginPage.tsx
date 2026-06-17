@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../context/AuthContext';
 import './AuthPages.css';
 
-import { PREDEFINED_USERS } from '../context/DataContext';
+import { authService } from '../services/authService';
 
 interface LoginPageProps {
   onLogin?: (user: User) => void;
@@ -16,6 +16,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setForm({ email: '', password: '' });
   }, []);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -25,7 +26,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   };
 
   const autofill = (email: string) => {
-    setForm({ email, password: 'password123' });
+    setForm({ email, password: '12345678' });
     setError('');
   };
 
@@ -37,21 +38,43 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 600));
+      const loginRes = await authService.login(form.email, form.password);
 
-      const foundUser = PREDEFINED_USERS.find(u => u.email === form.email);
-      if (foundUser) {
-        onLogin?.(foundUser);
+      const userToSet: User = {
+        id: loginRes.id,
+        email: loginRes.email,
+        name: loginRes.fullName,
+        role: loginRes.role.toLowerCase() as User['role']
+      };
 
-        if (foundUser.role === 'admin') navigate('/admin');
-        else if (foundUser.role === 'expert') navigate('/expert/review');
-        else if (foundUser.role === 'seller') navigate('/seller/dashboard');
-        else navigate('/auctions');
-      } else {
-        throw new Error('User not found');
-      }
+      onLogin?.(userToSet);
+
+      if (userToSet.role === 'admin') navigate('/admin');
+      else if (userToSet.role === 'expert') navigate('/expert/review');
+      else if (userToSet.role === 'seller') navigate('/seller/dashboard');
+      else navigate('/auctions');
     } catch {
       setError('Invalid email or password. Try a demo account below.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!form.email) {
+      setError('Te rugăm să completezi câmpul "Email address" mai întâi.');
+      setSuccess('');
+      return;
+    }
+    setLoading(true);
+    try {
+      await authService.forgotPassword(form.email);
+      setSuccess('Parola ta a fost resetată automat! Acum este ResetPass@2026. Te poți loga și îți vei putea schimba parola.');
+      setError('');
+    } catch {
+      setError('Nu am putut reseta parola. Verifică dacă adresa de email este corectă.');
+      setSuccess('');
     } finally {
       setLoading(false);
     }
@@ -102,7 +125,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             <div className="auth-field">
               <div className="auth-field__label-row">
                 <label className="auth-field__label" htmlFor="password">Password</label>
-                <a href="#forgot" className="auth-field__forgot">Forgot password?</a>
+                <a href="#forgot" className="auth-field__forgot" onClick={handleForgotPassword}>Forgot password?</a>
               </div>
               <input
                 id="password"
@@ -117,6 +140,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </div>
 
             {error && <p className="auth-form__error">{error}</p>}
+            {success && <p className="auth-form__error" style={{ color: 'var(--sage)', background: 'rgba(92,113,94,0.1)', padding: '10px', borderRadius: '5px' }}>{success}</p>}
 
             <button className="auth-form__submit" type="submit" disabled={loading}>
               {loading ? <span className="auth-form__spinner" /> : 'Sign in'}

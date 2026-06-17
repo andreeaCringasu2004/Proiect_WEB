@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
+import { favoriteService } from '../services/favoriteService';
 import PaymentModal from '../components/PaymentModal';
 import './WatchlistPage.css';
 
@@ -28,11 +30,13 @@ interface SessionToast {
   type: 'start' | 'warning' | 'urgent' | 'info';
   message: string;
   sub: string;
+  auctionId?: number;
 }
 
-const useCountdown = (target: Date) => {
-  const calc = () => {
-    const diff = target.getTime() - Date.now();
+const useCountdown = (target: Date | string) => {
+  const [t, setT] = useState(() => {
+    const targetDate = typeof target === 'string' ? new Date(target) : target;
+    const diff = targetDate.getTime() - Date.now();
     if (diff <= 0) return { h: 0, m: 0, s: 0, totalMs: 0 };
     return {
       h: Math.floor(diff / 3_600_000),
@@ -40,123 +44,30 @@ const useCountdown = (target: Date) => {
       s: Math.floor((diff % 60_000) / 1_000),
       totalMs: diff,
     };
-  };
-  const [t, setT] = useState(calc);
-  useEffect(() => {
-    const id = setInterval(() => setT(calc()), 1000);
-    return () => clearInterval(id);
   });
+
+  useEffect(() => {
+    const targetDate = typeof target === 'string' ? new Date(target) : target;
+    const id = setInterval(() => {
+      const diff = targetDate.getTime() - Date.now();
+      if (diff <= 0) {
+        setT({ h: 0, m: 0, s: 0, totalMs: 0 });
+      } else {
+        setT({
+          h: Math.floor(diff / 3_600_000),
+          m: Math.floor((diff % 3_600_000) / 60_000),
+          s: Math.floor((diff % 60_000) / 1_000),
+          totalMs: diff,
+        });
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [target]);
+
   return t;
 };
 
-const INITIAL_WATCHLIST: WatchlistItem[] = [
-  {
-    id: 1,
-    title: 'Lumière dorée',
-    artist: 'Marie Leblanc',
-    category: 'Painting',
-    currentBid: 4_200,
-    startingBid: 2_000,
-    status: 'active',
-    endsAt: new Date(Date.now() + 2 * 3_600_000 + 14 * 60_000),
-    img: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
-    isWatched: true,
-    notified10: false,
-    notified5: false,
-    notifiedStart: true,
-  },
-  {
-    id: 2,
-    title: 'Silent Forms',
-    artist: 'Kenji Watanabe',
-    category: 'Sculpture',
-    currentBid: 8_750,
-    startingBid: 4_000,
-    status: 'active',
-    endsAt: new Date(Date.now() + 8 * 60_000 + 30_000), // 8.5 min → will trigger T-10
-    img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80',
-    isWatched: true,
-    notified10: false,
-    notified5: false,
-    notifiedStart: true,
-  },
-  {
-    id: 4,
-    title: 'Golden Hour — Complete Series',
-    artist: 'Ama Diallo',
-    category: 'Painting',
-    currentBid: 3_100,
-    startingBid: 1_500,
-    status: 'upcoming',
-    endsAt: new Date(Date.now() + 24 * 3_600_000),
-    img: 'https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=600&q=80',
-    isWatched: true,
-    notified10: false,
-    notified5: false,
-    notifiedStart: false,
-  },
-  {
-    id: 8,
-    title: 'Fragile Geometry',
-    artist: 'Ines Moreau',
-    category: 'Mixed Media',
-    currentBid: 1_450,
-    startingBid: 800,
-    status: 'active',
-    endsAt: new Date(Date.now() + 4 * 60_000 + 20_000), // ~4.3 min → will trigger T-5
-    img: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?w=600&q=80',
-    isWatched: true,
-    notified10: true,  // already sent T-10
-    notified5: false,
-    notifiedStart: true,
-  },
-  {
-    id: 11,
-    title: 'Autumn in Paris',
-    artist: 'Jean-Luc Dubois',
-    category: 'Painting',
-    currentBid: 2_100,
-    startingBid: 1_200,
-    status: 'active',
-    endsAt: new Date(Date.now() + 11 * 60_000 + 10_000), // ~11m (will trigger T-10 soon)
-    img: 'https://images.unsplash.com/photo-1549887552-cb1071d3e5ac?w=600&q=80',
-    isWatched: true,
-    notified10: false,
-    notified5: false,
-    notifiedStart: true,
-  },
-  {
-    id: 12,
-    title: 'Metallic Distortions',
-    artist: 'Anna Kozlova',
-    category: 'Sculpture',
-    currentBid: 5_500,
-    startingBid: 3_000,
-    status: 'active',
-    endsAt: new Date(Date.now() + 6 * 60_000 + 15_000), // ~6m (will trigger T-5 soon)
-    img: 'https://images.unsplash.com/photo-1606828556855-83e9b11786ba?w=600&q=80',
-    isWatched: true,
-    notified10: true,
-    notified5: false,
-    notifiedStart: true,
-  },
-  {
-    id: 13,
-    title: 'Lost in the City',
-    artist: 'Marc Vance',
-    category: 'Photography',
-    currentBid: 9_200,
-    startingBid: 5_000,
-    status: 'ended',
-    isWon: true,
-    endsAt: new Date(Date.now() - 3600_000), // Ended 1 hour ago
-    img: 'https://images.unsplash.com/photo-1449844908441-8829872d2607?w=600&q=80',
-    isWatched: true,
-    notified10: true,
-    notified5: true,
-    notifiedStart: true,
-  }
-];
+
 
 
 interface WatchCardProps {
@@ -175,8 +86,8 @@ const WatchCard: React.FC<WatchCardProps> = ({ item, onToggle, onPay }) => {
         <img src={item.img} alt={item.title} className="wl-card__img" loading="lazy" />
 
         {/* Status badge */}
-        <span className={`wl-card__status wl-card__status--${item.status}`}>
-          {item.status === 'active' ? '● Live' : item.status === 'upcoming' ? '◯ Soon' : '✓ Ended'}
+        <span className={`wl-card__status wl-card__status--${(item.status === 'active' && cd.totalMs <= 0) ? 'ended' : item.status}`}>
+          {(item.status === 'active' && cd.totalMs > 0) ? '● Live' : (item.status === 'active' && cd.totalMs <= 0) ? '✓ Ended' : item.status === 'upcoming' ? '◯ Soon' : '✓ Ended'}
         </span>
 
         {/* Category */}
@@ -236,10 +147,10 @@ const WatchCard: React.FC<WatchCardProps> = ({ item, onToggle, onPay }) => {
 };
 
 
-const SessionToastStack: React.FC<{ toasts: SessionToast[]; onDismiss: (id: number) => void }> = ({ toasts, onDismiss }) => (
+const SessionToastStack: React.FC<{ toasts: SessionToast[]; onDismiss: (id: number) => void; onClickToast: (auctionId?: number) => void }> = ({ toasts, onDismiss, onClickToast }) => (
   <div className="session-toasts" aria-live="assertive">
     {toasts.map(t => (
-      <div key={t.id} className={`session-toast session-toast--${t.type}`}>
+      <div key={t.id} className={`session-toast session-toast--${t.type}`} onClick={() => t.auctionId && onClickToast(t.auctionId)} style={{ cursor: t.auctionId ? 'pointer' : 'default' }}>
         <div className="session-toast__icon">
           {t.type === 'start' ? '🎯' : t.type === 'warning' ? '⚠' : t.type === 'urgent' ? '🔴' : 'ℹ'}
         </div>
@@ -247,7 +158,7 @@ const SessionToastStack: React.FC<{ toasts: SessionToast[]; onDismiss: (id: numb
           <div className="session-toast__msg">{t.message}</div>
           <div className="session-toast__sub">{t.sub}</div>
         </div>
-        <button className="session-toast__close" onClick={() => onDismiss(t.id)}>✕</button>
+        <button className="session-toast__close" onClick={(e) => { e.stopPropagation(); onDismiss(t.id); }}>✕</button>
       </div>
     ))}
   </div>
@@ -258,10 +169,18 @@ let toastSeq = 1;
 
 const WatchlistPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { auctions, bids } = useData();
+  const [searchParams] = useSearchParams();
 
-  const [items, setItems] = useState<WatchlistItem[]>(INITIAL_WATCHLIST);
+  const filterParam = searchParams.get('filter');
+  const initialFilter = filterParam && ['all', 'active', 'upcoming', 'ended', 'my-bids'].includes(filterParam)
+    ? (filterParam as any)
+    : 'all';
+
+  const [items, setItems] = useState<WatchlistItem[]>([]);
   const [sessionToasts, setSessionToasts] = useState<SessionToast[]>([]);
-  const [filter, setFilter] = useState<'all' | 'active' | 'upcoming' | 'ended'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'upcoming' | 'ended' | 'my-bids'>(initialFilter);
   const [actionToast, setActionToast] = useState('');
   const [actionVisible, setActionVisible] = useState(false);
 
@@ -295,6 +214,7 @@ const WatchlistPage: React.FC = () => {
             type: 'warning',
             message: `⚠ 10 minutes left — ${item.title}`,
             sub: `Current bid: €${item.currentBid.toLocaleString()}`,
+            auctionId: item.id,
           });
           updated.notified10 = true;
         }
@@ -305,6 +225,7 @@ const WatchlistPage: React.FC = () => {
             type: 'urgent',
             message: `🔴 5 minutes left — ${item.title}`,
             sub: `Final price so far: €${item.currentBid.toLocaleString()} — bid now!`,
+            auctionId: item.id,
           });
           updated.notified5 = true;
         }
@@ -318,27 +239,97 @@ const WatchlistPage: React.FC = () => {
   /* ── Auction-start notification (simulated on mount) ── */
   useEffect(() => {
     const upcomingWatched = items.filter(i => i.isWatched && i.status === 'upcoming' && !i.notifiedStart);
-    if (upcomingWatched.length > 0) {
-      setTimeout(() => {
+    if (upcomingWatched.length === 0) return;
+
+    const timer = setTimeout(() => {
+      upcomingWatched.forEach(item => {
         addSessionToast({
           type: 'start',
-          message: `🎯 Auction started — ${upcomingWatched[0].title}`,
-          sub: 'A product you are watching has gone live. Starting bid: €' + upcomingWatched[0].startingBid.toLocaleString(),
+          message: `🎯 Auction started — ${item.title}`,
+          sub: 'A product you are watching has gone live. Starting bid: €' + item.startingBid.toLocaleString(),
+          auctionId: item.id,
         });
-      }, 4000); // simulate start after 4s for demo
-    }
-  }, []);
+      });
+      // Mark as notified so it doesn't trigger again
+      setItems(prev => prev.map(i =>
+        upcomingWatched.some(uw => uw.id === i.id) ? { ...i, notifiedStart: true } : i
+      ));
+    }, 4000); // simulate start after 4s for demo
+
+    return () => clearTimeout(timer);
+  }, [addSessionToast, items]);
+
+  // Load favorites from backend and map auctions to items
+  useEffect(() => {
+    if (!user) return;
+    favoriteService.getFavorites().then(favIds => {
+      const initialItems: WatchlistItem[] = auctions.map(a => {
+        const isWatched = favIds.includes(a.productId || -1);
+        return {
+          id: a.id,
+          title: a.title,
+          artist: a.artist,
+          category: a.category,
+          currentBid: a.currentBid,
+          startingBid: a.startingBid,
+          status: a.status === 'sold' ? 'ended' : a.status,
+          endsAt: new Date(a.endsAt),
+          img: a.image,
+          isWatched,
+          notified10: false,
+          notified5: false,
+          notifiedStart: false
+        };
+      });
+      setItems(initialItems);
+    }).catch(err => {
+      console.warn('Failed to load favorites:', err);
+      const fallback = auctions.map(a => ({
+        id: a.id,
+        title: a.title,
+        artist: a.artist,
+        category: a.category,
+        currentBid: a.currentBid,
+        startingBid: a.startingBid,
+        status: a.status === 'sold' ? ('ended' as const) : a.status,
+        endsAt: new Date(a.endsAt),
+        img: a.image,
+        isWatched: false,
+        notified10: false,
+        notified5: false,
+        notifiedStart: false
+      }));
+      setItems(fallback);
+    });
+  }, [auctions, user]);
 
   if (!user || !['bidder', 'seller', 'expert', 'admin'].includes(user.role)) {
     return <Navigate to="/login" replace />;
   }
 
   const toggleWatch = (id: number) => {
-    setItems(prev => prev.map(item => {
-      if (item.id !== id) return item;
-      const next = !item.isWatched;
-      showAction(next ? '♥ Added to watchlist' : 'Removed from watchlist');
-      return { ...item, isWatched: next };
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    const next = !item.isWatched;
+    const auction = auctions.find(a => a.id === id);
+    const prodId = auction?.productId;
+
+    if (prodId) {
+      const promise = next
+        ? favoriteService.addFavorite(prodId)
+        : favoriteService.removeFavorite(prodId);
+
+      promise.then(() => {
+        showAction(next ? '♥ Added to watchlist' : 'Removed from watchlist');
+      }).catch(err => {
+        console.warn('Failed to update favorite:', err);
+      });
+    }
+
+    setItems(prev => prev.map(i => {
+      if (i.id !== id) return i;
+      return { ...i, isWatched: next };
     }));
   };
 
@@ -346,13 +337,19 @@ const WatchlistPage: React.FC = () => {
     setSessionToasts(prev => prev.filter(t => t.id !== id));
   };
 
+  const handleToastClick = (auctionId?: number) => {
+    if (auctionId) navigate('/auctions/' + auctionId);
+  };
+
   const watched = items.filter(i => i.isWatched);
-  const displayed = (filter === 'all' ? watched : watched.filter(i => i.status === filter));
+  const displayed = filter === 'my-bids'
+    ? items.filter(i => bids.some(b => b.auctionId === i.id && (b.bidderId === user.id || b.bidder === user.name)))
+    : (filter === 'all' ? watched : watched.filter(i => i.status === filter));
 
   return (
     <main className="wl-page">
       {/* Session toasts stack */}
-      <SessionToastStack toasts={sessionToasts} onDismiss={dismissToast} />
+      <SessionToastStack toasts={sessionToasts} onDismiss={dismissToast} onClickToast={handleToastClick} />
 
       {/* Header */}
       <section className="wl-header">
@@ -380,16 +377,18 @@ const WatchlistPage: React.FC = () => {
       {/* Filters */}
       <div className="wl-filters">
         <div className="container wl-filters__inner">
-          {(['all', 'active', 'upcoming', 'ended'] as const).map(f => (
+          {(['all', 'active', 'upcoming', 'ended', 'my-bids'] as const).map(f => (
             <button
               key={f}
               className={`wl-filter-pill ${filter === f ? 'wl-filter-pill--active' : ''}`}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'active' ? '● Live' : f === 'upcoming' ? 'Upcoming' : 'Ended'}
+              {f === 'all' ? 'All' : f === 'active' ? '● Live' : f === 'upcoming' ? 'Upcoming' : f === 'ended' ? 'Ended' : 'My Bids'}
               {f !== 'all' && (
                 <span className="wl-filter-pill__count">
-                  {watched.filter(i => i.status === f).length}
+                  {f === 'my-bids'
+                    ? auctions.filter(a => bids.some(b => b.auctionId === a.id && (b.bidderId === user.id || b.bidder === user.name))).length
+                    : watched.filter(i => i.status === f).length}
                 </span>
               )}
             </button>

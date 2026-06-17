@@ -2,7 +2,22 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { productService } from '../services/productService';
 import './ExpertPage.css';
+
+const selectMockImage = (fileName: string) => {
+  const hash = Array.from(fileName).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const images = [
+    'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800&q=80',
+    'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=800&q=80',
+    'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&q=80',
+    'https://images.unsplash.com/photo-1541367777708-7905fe3296c0?w=800&q=80',
+    'https://images.unsplash.com/photo-1444491741275-3747c53c99b4?w=800&q=80',
+    'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80',
+    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80'
+  ];
+  return images[hash % images.length];
+};
 
 /* ══════════════════════════════════════════════════════════
    TYPES
@@ -17,7 +32,7 @@ const CATEGORY_OPTIONS = [
 
 const ExpertPage: React.FC = () => {
   const { user } = useAuth();
-  const { messages, addMessage, addAppointment, appointments, products, users, updateProduct, evalRequests, updateEvalRequest } = useData();
+  const { messages, addMessage, addAppointment, appointments, products, users, updateProduct, evalRequests, updateEvalRequest, updateMessage } = useData();
 
   const expertProducts = (products || []).filter(p => !user || user.role === 'admin' || p.expertId === user.id || p.status === 'PENDING');
 
@@ -114,7 +129,7 @@ const ExpertPage: React.FC = () => {
     setChatDocs([]);
   };
 
-  const categorise = () => {
+  const categorise = async () => {
     const finalCat = newCategory.trim() || category;
     if (!finalCat) { showToast('Please select or create a category first.'); return; }
     if (!selected) return;
@@ -127,7 +142,14 @@ const ExpertPage: React.FC = () => {
       expertOpinion: opinion,
       status: 'APPROVED',
     };
-    updateProduct(updated);
+    try {
+      await productService.approveProduct(selected.id);
+      updateProduct(updated);
+    } catch (error) {
+      console.error('Failed to approve product:', error);
+      showToast('Error approving product on the server.');
+      return;
+    }
     showToast(`✓ "${selected.title}" categorised as ${finalCat}. Seller can now launch.`);
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -150,10 +172,17 @@ const ExpertPage: React.FC = () => {
     setScheduleDate('');
   };
 
-  const reject = () => {
+  const reject = async () => {
     if (!selected) return;
     if (!window.confirm('Reject this submission? The seller will be notified.')) return;
-    updateProduct({ ...selected, status: 'REJECTED' });
+    try {
+      await productService.rejectProduct(selected.id, opinion || 'Rejected');
+      updateProduct({ ...selected, status: 'REJECTED' });
+    } catch (error) {
+      console.error('Failed to reject product:', error);
+      showToast('Error rejecting product on the server.');
+      return;
+    }
     showToast(`Submission rejected. Seller notified.`);
   };
 
@@ -265,7 +294,7 @@ const ExpertPage: React.FC = () => {
                     <button
                       onClick={() => {
                         updateEvalRequest({ ...req, status: 'accepted', acceptedByExpertId: user?.id || 0 });
-                        if (product) updateProduct({ ...product, status: 'UNDER_REVIEW', expertId: user?.id || 0 });
+                        if (product) updateProduct({ ...product, status: 'UNDER_REVIEW', expertId: user?.id || 0, documents: req.documents });
                         const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                         if (product && user) addMessage({ id: Date.now(), productId: req.productId, fromId: user.id || 0, toId: req.sellerId, text: `✅ Am acceptat cererea ta de evaluare pentru "${product.title}". Te voi contacta în curând pentru a stabili detaliile.`, time });
                         showToast('✓ Cerere acceptată! Produsul a fost atribuit ție.');
@@ -347,13 +376,13 @@ const ExpertPage: React.FC = () => {
                     <img src={(p.images && p.images[0]) || 'https://via.placeholder.com/150'} alt={p.title} className="expert-list__thumb" />
                     <div className="expert-list__info">
                       <div className="expert-list__title">{p.title}</div>
-                      <span className={`expert-list__cat ${p.status === 'APPROVED' || p.status === 'active' || p.status === 'upcoming' || p.status === 'sold'
+                      <span className={`expert-list__cat ${(p.status as any) === 'APPROVED' || (p.status as any) === 'active' || (p.status as any) === 'upcoming' || (p.status as any) === 'sold'
                           ? 'expert-list__cat--known'
                           : 'expert-list__cat--rejected'
                         }`} style={{
-                          color: p.status === 'APPROVED' || p.status === 'active' || p.status === 'upcoming' || p.status === 'sold' ? 'var(--sage, #4a6741)' : 'var(--rust, #8b3a2a)'
+                          color: (p.status as any) === 'APPROVED' || (p.status as any) === 'active' || (p.status as any) === 'upcoming' || (p.status as any) === 'sold' ? 'var(--sage, #4a6741)' : 'var(--rust, #8b3a2a)'
                         }}>
-                        {p.status === 'APPROVED' || p.status === 'active' || p.status === 'sold' || p.status === 'upcoming'
+                        {(p.status as any) === 'APPROVED' || (p.status as any) === 'active' || (p.status as any) === 'sold' || (p.status as any) === 'upcoming'
                           ? `✓ ${p.category || 'Approved'}`
                           : '✕ Rejected'}
                       </span>
@@ -386,7 +415,7 @@ const ExpertPage: React.FC = () => {
                 )}
                 <div className={`expert-img-status expert-img-status--${selected.status.toLowerCase()}`}>
                   {selected.status === 'PENDING' || selected.status === 'UNDER_REVIEW' ? '⏳ Pending Review'
-                    : selected.status === 'APPROVED' || selected.status === 'active' || selected.status === 'sold' || selected.status === 'upcoming' ? `✓ ${selected.category}`
+                    : (selected.status as any) === 'APPROVED' || (selected.status as any) === 'active' || (selected.status as any) === 'sold' || (selected.status as any) === 'upcoming' ? `✓ ${selected.category}`
                       : '✕ Rejected'}
                 </div>
               </div>
@@ -404,7 +433,7 @@ const ExpertPage: React.FC = () => {
                       : t === 'schedule' ? '📅 Schedule Eval'
                         : t === 'categorise' ? '✒ Categorise Work'
                           : t === 'docs' ? `📎 Documents (${(selected?.documents || []).length})`
-                            : `💬 Chat with Seller${(currentChatMsgs || []).length > 0 ? ` (${currentChatMsgs.length})` : ''}`}
+                            : `💬 Chat cu Seller${(currentChatMsgs || []).length > 0 ? ` (${currentChatMsgs.length})` : ''}`}
                   </button>
                 ))}
               </div>
@@ -417,7 +446,7 @@ const ExpertPage: React.FC = () => {
                     <div className="expert-info__meta">
                       <span>{selected.artist}</span>
                       <span>·</span>
-                      <span>Submitted by: <strong>{selected.submittedBy}</strong></span>
+                      <span>Submitted by: <strong>{users.find(u => u.id === selected.sellerId)?.name || `Seller #${selected.sellerId}`}</strong></span>
                       <span>·</span>
                       <span>{selected.submittedAt}</span>
                     </div>
@@ -516,11 +545,11 @@ const ExpertPage: React.FC = () => {
                       <h3 className="expert-docs__heading" style={{ marginBottom: '16px' }}>Evaluation Result</h3>
                       <div className="expert-result__row">
                         <span className="expert-result__label">Status</span>
-                        <span className="expert-result__value" style={{ color: selected.status === 'APPROVED' || selected.status === 'active' || selected.status === 'upcoming' || selected.status === 'sold' ? 'var(--sage)' : 'var(--rust)' }}>
-                          {selected.status === 'APPROVED' || selected.status === 'active' || selected.status === 'upcoming' || selected.status === 'sold' ? 'Approved' : 'Rejected'}
+                        <span className="expert-result__value" style={{ color: (selected.status as any) === 'APPROVED' || (selected.status as any) === 'active' || (selected.status as any) === 'upcoming' || (selected.status as any) === 'sold' ? 'var(--sage)' : 'var(--rust)' }}>
+                          {(selected.status as any) === 'APPROVED' || (selected.status as any) === 'active' || (selected.status as any) === 'upcoming' || (selected.status as any) === 'sold' ? 'Approved' : 'Rejected'}
                         </span>
                       </div>
-                      {(selected.status === 'APPROVED' || selected.status === 'active' || selected.status === 'upcoming' || selected.status === 'sold') && (
+                      {((selected.status as any) === 'APPROVED' || (selected.status as any) === 'active' || (selected.status as any) === 'upcoming' || (selected.status as any) === 'sold') && (
                         <>
                           <div className="expert-result__row">
                             <span className="expert-result__label">Category</span>
@@ -549,18 +578,21 @@ const ExpertPage: React.FC = () => {
                 <div className="expert-docs">
                   <h3 className="expert-docs__heading">Submitted Documents</h3>
                   <p className="expert-docs__sub">Review these before categorising the work.</p>
-                  {(selected.documents || []).map((doc, i) => (
-                    <div key={i} className="expert-doc-item">
-                      <span className="expert-doc-icon">📄</span>
-                      <div className="expert-doc-info">
-                        <div className="expert-doc-name">{doc}</div>
-                        <div className="expert-doc-type">{doc.endsWith('.pdf') ? 'PDF Document' : 'Image'}</div>
+                  {(selected.documents || []).map((doc, i) => {
+                    const displayFilename = doc.substring(doc.lastIndexOf('/') + 1);
+                    return (
+                      <div key={i} className="expert-doc-item">
+                        <span className="expert-doc-icon">📄</span>
+                        <div className="expert-doc-info">
+                          <div className="expert-doc-name">{displayFilename}</div>
+                          <div className="expert-doc-type">{doc.endsWith('.pdf') ? 'PDF Document' : 'Image'}</div>
+                        </div>
+                        <button className="expert-doc-view" onClick={() => setPreviewDoc(doc)}>
+                          View →
+                        </button>
                       </div>
-                      <button className="expert-doc-view" onClick={() => setPreviewDoc(doc)}>
-                        View →
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -568,7 +600,7 @@ const ExpertPage: React.FC = () => {
               {activeTab === 'chat' && (
                 <div className="expert-chat">
                   <div className="expert-chat__header">
-                    <h3 className="expert-chat__title">Chat with Seller via DataContext</h3>
+                    <h3 className="expert-chat__title">Chat cu Seller: {users.find(u => u.id === selected.sellerId)?.name || 'Seller'}</h3>
                   </div>
 
                   <div className="expert-chat__messages" role="log" aria-live="polite">
@@ -583,18 +615,34 @@ const ExpertPage: React.FC = () => {
                           className={`expert-chat__msg ${isOwn ? 'expert-chat__msg--own' : 'expert-chat__msg--other'}`}
                         >
                           <div className={`expert-chat__bubble ${isOwn ? 'expert-chat__bubble--expert' : 'expert-chat__bubble--seller'}`}>
-                            <div className="expert-chat__text">{msg.text}</div>
+                            <div className="expert-chat__text">
+                              {msg.isDeleted ? <em style={{opacity: 0.7}}>Mesaj șters</em> : msg.text}
+                            </div>
                             {msg.documents && msg.documents.length > 0 && (
-                              <div className="expert-chat__docs">
-                                {msg.documents.map((d, idx) => (
-                                  <div key={idx} className="expert-chat__doc" onClick={() => setPreviewDoc(d)}>
-                                    <span>📄</span> <span className="expert-chat__doc-name">{d}</span>
-                                  </div>
-                                ))}
+                              <div className="expert-chat__docs" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                                {msg.documents.map((d, idx) => {
+                                  const ext = d.split('.').pop()?.toLowerCase();
+                                  const isImg = ext ? ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) : false;
+                                  const displayUrl = d.startsWith('http') ? d : selectMockImage(d);
+                                  return (
+                                    <div key={idx} className="expert-chat__doc" style={{ cursor: 'pointer' }}>
+                                      {isImg ? (
+                                        <img src={displayUrl} alt="Attachment" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '8px' }} onClick={() => setPreviewDoc(d)} />
+                                      ) : (
+                                        <div onClick={() => setPreviewDoc(d)} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          <span>📄</span> <span className="expert-chat__doc-name">{d.substring(d.lastIndexOf('/') + 1)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            <div className="expert-chat__time">
-                              {isOwn ? 'You' : 'Seller'} · {msg.time}
+                            <div className="expert-chat__time" style={{display: 'flex', alignItems: 'center', justifyContent: isOwn ? 'flex-end' : 'flex-start', gap: '8px'}}>
+                              <span>{isOwn ? 'You' : (msg.fromId === 100 ? 'Admin ArtPulse' : 'Seller')} · {msg.time}</span>
+                              {isOwn && !msg.isDeleted && (
+                                <button onClick={() => updateMessage(msg.id, { isDeleted: true })} style={{fontSize: '10px', color: 'var(--rust)', background: 'none', border: 'none', cursor: 'pointer', padding: 0}}>Delete</button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -607,11 +655,14 @@ const ExpertPage: React.FC = () => {
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       {chatDocs.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
-                          {chatDocs.map((d, i) => (
-                            <span key={i} style={{ fontSize: '10px', background: 'var(--ink-faint)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              {d} <span style={{ cursor: 'pointer', color: 'var(--error)' }} onClick={() => setChatDocs(p => p.filter((_, idx) => idx !== i))}>×</span>
-                            </span>
-                          ))}
+                          {chatDocs.map((d, i) => {
+                            const displayFilename = d.substring(d.lastIndexOf('/') + 1);
+                            return (
+                              <span key={i} style={{ fontSize: '10px', background: 'var(--ink-faint)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {displayFilename.length > 20 ? displayFilename.substring(0, 20) + '...' : displayFilename} <span style={{ cursor: 'pointer', color: 'var(--error)' }} onClick={() => setChatDocs(p => p.filter((_, idx) => idx !== i))}>×</span>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                       <textarea
@@ -646,9 +697,27 @@ const ExpertPage: React.FC = () => {
                       multiple
                       hidden
                       ref={chatFileRef}
-                      onChange={e => {
+                      onChange={async (e) => {
                         const files = Array.from(e.target.files || []);
-                        setChatDocs(prev => [...prev, ...files.map(f => f.name)]);
+                        const uploadedUrls: string[] = [];
+                        for (const file of files) {
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          try {
+                            const res = await fetch('http://localhost:8081/api/upload', {
+                              method: 'POST',
+                              body: formData
+                            });
+                            const data = await res.json();
+                            if (data && data.url) {
+                              uploadedUrls.push(data.url);
+                            }
+                          } catch (err) {
+                            console.error('Failed to upload file:', err);
+                            uploadedUrls.push(file.name);
+                          }
+                        }
+                        setChatDocs(prev => [...prev, ...uploadedUrls]);
                       }}
                     />
                     <button
@@ -689,12 +758,25 @@ const ExpertPage: React.FC = () => {
                 <span style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'serif' }}>ARTPULSE AUTHENTICATION</span>
                 <span style={{ fontSize: '12px' }}>DOC_ID: {Math.floor(Math.random() * 900000 + 100000)}</span>
               </div>
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div style={{ fontSize: '48px', marginBottom: '10px' }}>📜</div>
-                <h4 style={{ fontSize: '18px', marginBottom: '10px' }}>Simulated Document Content</h4>
-                <p style={{ color: '#666', maxWidth: '400px', margin: '0 auto', fontSize: '14px', lineHeight: '1.6' }}>
-                  This is a simulated preview of <strong>{previewDoc}</strong>. In a production environment, this would render the actual PDF or image stored on the server.
-                </p>
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                {(() => {
+                  const ext = previewDoc.split('.').pop()?.toLowerCase();
+                  const isImg = ext ? ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) : false;
+                  if (isImg) {
+                    const url = previewDoc.startsWith('http') ? previewDoc : selectMockImage(previewDoc);
+                    return <img src={url} alt="Document Preview" style={{ maxWidth: '100%', maxHeight: '350px', borderRadius: '8px', boxShadow: 'var(--shadow-md)' }} />;
+                  } else {
+                    return (
+                      <>
+                        <div style={{ fontSize: '48px', marginBottom: '10px' }}>📜</div>
+                        <h4 style={{ fontSize: '18px', marginBottom: '10px' }}>Simulated Document Content</h4>
+                        <p style={{ color: '#666', maxWidth: '400px', margin: '0 auto', fontSize: '14px', lineHeight: '1.6' }}>
+                          This is a simulated preview of <strong>{previewDoc}</strong>. In a production environment, this would render the actual PDF or image stored on the server.
+                        </p>
+                      </>
+                    );
+                  }
+                })()}
               </div>
               <div style={{ marginTop: 'auto', padding: '20px', background: '#eee', borderRadius: '8px', fontSize: '11px', color: '#777' }}>
                 Digital signature verified: 2026-04-14 13:10:42.

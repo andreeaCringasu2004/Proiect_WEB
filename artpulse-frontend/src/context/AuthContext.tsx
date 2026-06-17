@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authService } from '../services/authService';
 
 export interface User {
   id?: number;
@@ -9,6 +10,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isLoading: boolean;
   login: (user: User) => void;
   logout: () => void;
@@ -24,8 +26,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const stored = sessionStorage.getItem('artpulse_demo_user');
-        if (stored) setUser(JSON.parse(stored));
+        const storedUser = authService.getCurrentUser();
+        if (storedUser) {
+          setUser({
+            id: storedUser.id,
+            email: storedUser.email,
+            name: storedUser.fullName,
+            role: storedUser.role.toLowerCase() as User['role']
+          });
+        }
       } catch {
         setUser(null);
       } finally {
@@ -37,19 +46,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = (userData: User) => {
     setUser(userData);
-    sessionStorage.setItem('artpulse_demo_user', JSON.stringify(userData));
   };
 
   const logout = async () => {
     try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout failed", error);
     } finally {
       setUser(null);
-      sessionStorage.removeItem('artpulse_demo_user');
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, isGuest: !user }}>
+    <AuthContext.Provider value={{ user, setUser, isLoading, login, logout, isGuest: !user }}>
       {children}
     </AuthContext.Provider>
   );

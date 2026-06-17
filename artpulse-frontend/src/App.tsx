@@ -42,7 +42,7 @@ const ChatWidgetController: React.FC = () => {
   const location = useLocation();
   const hiddenPaths = ['/login', '/register', '/admin'];
   if (hiddenPaths.some(p => location.pathname.startsWith(p))) return null;
-  if (!user || !['bidder', 'seller', 'expert'].includes(user.role)) return null;
+  if (!user || !['bidder', 'seller', 'expert', 'admin'].includes(user.role)) return null;
   return <ChatWidget />;
 };
 

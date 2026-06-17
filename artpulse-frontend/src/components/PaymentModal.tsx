@@ -5,6 +5,7 @@ interface PaymentModalProps {
   amount: number;
   onClose: () => void;
   onSuccess: () => void;
+  itemName?: string;
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ amount, onClose, onSuccess }) => {
@@ -13,10 +14,16 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ amount, onClose, onSuccess 
   const [expiry, setExpiry] = useState('');
   const [cvc, setCvc] = useState('');
   const [error, setError] = useState('');
+  const [cardBrand, setCardBrand] = useState('💳');
 
   const handleCardNumChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, ''); // Numbers only
-    if (val.length <= 16) setCardNum(val);
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 16) val = val.slice(0, 16);
+    let formatted = val.match(/.{1,4}/g)?.join(' ') || val;
+    setCardNum(formatted);
+    if (val.startsWith('4')) setCardBrand('🔵'); // Visa Mock
+    else if (val.startsWith('5')) setCardBrand('🔴'); // MC Mock
+    else setCardBrand('💳');
   };
 
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,31 +99,29 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ amount, onClose, onSuccess 
             <input type="text" placeholder="John Doe" required />
           </div>
           <div className="pm-field">
-            <label>Card Number</label>
-            <input 
-              type="text" 
-              placeholder="1234 5678 1234 5678" 
-              value={cardNum}
-              onChange={handleCardNumChange}
-              required 
-            />
-          </div>
-          <div className="pm-row">
-            <div className="pm-field">
-              <label>Expiry</label>
+            <label>Card details</label>
+            <div className="pm-stripe-element">
+              <span className="pm-stripe-icon">{cardBrand}</span>
               <input 
+                className="pm-stripe-card"
+                type="text" 
+                placeholder="Card number" 
+                value={cardNum}
+                onChange={handleCardNumChange}
+                required 
+              />
+              <input 
+                className="pm-stripe-exp"
                 type="text" 
                 placeholder="MM/YY" 
                 value={expiry}
                 onChange={handleExpiryChange}
                 required 
               />
-            </div>
-            <div className="pm-field">
-              <label>CVC</label>
               <input 
+                className="pm-stripe-cvc"
                 type="text" 
-                placeholder="***" 
+                placeholder="CVC" 
                 value={cvc}
                 onChange={handleCvcChange}
                 required 
